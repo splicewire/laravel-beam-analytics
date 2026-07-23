@@ -58,6 +58,10 @@ BEAM_ANALYTICS_GTM_ID=GTM-XXXXXXX
 - `enabled_envs` (`BEAM_ANALYTICS_ENABLED_ENVS`, default `production`) — outside these, nothing renders.
 - `providers` — a map `name → { adapter: class-string, id }`. **Any number run at once**; each
   renders only when its id is non-empty and its adapter resolves, else nothing (fail-closed).
+- **Global-var fallback.** The GTM id reads `BEAM_ANALYTICS_GTM_ID` first, then falls back to the
+  conventional `GOOGLE_ANALYTICS_ID` (the ecosystem's well-known analytics env var) — the
+  beam-namespaced var always wins when set. Prefer a GTM container id (`GTM-XXXX`); a bare GA4
+  measurement id (`G-XXXX`) in the fallback is legacy-continuity only.
 
 ## Doctor
 

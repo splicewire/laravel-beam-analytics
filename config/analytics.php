@@ -41,7 +41,13 @@ return [
     'providers' => [
         'gtm' => [
             'adapter' => GtmProvider::class,
-            'id' => env('BEAM_ANALYTICS_GTM_ID'),
+            // Read the beam-namespaced var first, then fall back to the conventional global
+            // `GOOGLE_ANALYTICS_ID` — the ecosystem's well-known analytics env var, which a
+            // site (or another tool) may already carry. The `BEAM_ANALYTICS_*` var, when set,
+            // always wins. Prefer a GTM container id (`GTM-XXXX`); a bare GA4 measurement id
+            // (`G-XXXX`) in the fallback is legacy-continuity only — GA4 is meant to ride
+            // INSIDE the container, so migrate the id to a container when you can.
+            'id' => env('BEAM_ANALYTICS_GTM_ID', env('GOOGLE_ANALYTICS_ID')),
         ],
     ],
 
