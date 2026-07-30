@@ -1,10 +1,10 @@
 <?php
 
-namespace Splicewire\BeamAnalytics;
+namespace Splicewire\Beam\Analytics;
 
 use Illuminate\Contracts\Config\Repository;
-use Splicewire\BeamAnalytics\Contracts\AnalyticsProvider;
-use Splicewire\BeamAnalytics\Providers\NullProvider;
+use Splicewire\Beam\Analytics\Contracts\AnalyticsProvider;
+use Splicewire\Beam\Analytics\Providers\NullProvider;
 
 /**
  * The central fail-closed aggregator. Given the `analytics.*` config it resolves the

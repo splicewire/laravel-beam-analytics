@@ -1,8 +1,8 @@
 <?php
 
-namespace Splicewire\BeamAnalytics\Providers;
+namespace Splicewire\Beam\Analytics\Providers;
 
-use Splicewire\BeamAnalytics\Contracts\AnalyticsProvider;
+use Splicewire\Beam\Analytics\Contracts\AnalyticsProvider;
 
 /**
  * Google Tag Manager. Renders the standard container loader `<script>` in `<head>`

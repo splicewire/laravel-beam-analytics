@@ -1,6 +1,6 @@
 <?php
 
-use Splicewire\BeamAnalytics\Providers\GtmProvider;
+use Splicewire\Beam\Analytics\Providers\GtmProvider;
 
 return [
 

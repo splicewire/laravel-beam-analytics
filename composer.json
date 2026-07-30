@@ -18,18 +18,18 @@
     },
     "autoload": {
         "psr-4": {
-            "Splicewire\\BeamAnalytics\\": "src/"
+            "Splicewire\\Beam\\Analytics\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Splicewire\\BeamAnalytics\\Tests\\": "tests/"
+            "Splicewire\\Beam\\Analytics\\Tests\\": "tests/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "Splicewire\\BeamAnalytics\\BeamAnalyticsServiceProvider"
+                "Splicewire\\Beam\\Analytics\\BeamAnalyticsServiceProvider"
             ]
         }
     },

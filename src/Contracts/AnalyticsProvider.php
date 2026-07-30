@@ -1,6 +1,6 @@
 <?php
 
-namespace Splicewire\BeamAnalytics\Contracts;
+namespace Splicewire\Beam\Analytics\Contracts;
 
 /**
  * A single analytics provider adapter. The whole provider surface is two static

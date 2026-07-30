@@ -1,10 +1,10 @@
 <?php
 
-namespace Splicewire\BeamAnalytics\Tests;
+namespace Splicewire\Beam\Analytics\Tests;
 
 use Illuminate\Support\Facades\Blade;
 use PHPUnit\Framework\Attributes\Test;
-use Splicewire\BeamAnalytics\Providers\GtmProvider;
+use Splicewire\Beam\Analytics\Providers\GtmProvider;
 
 /**
  * The single high seam (per the PRD testing decisions): the rendered HTML the two
@@ -79,7 +79,7 @@ class AnalyticsDirectivesTest extends TestCase
     public function an_unknown_provider_name_resolves_to_null_output_not_a_fatal(): void
     {
         $this->configure('production', [
-            'mystery' => ['adapter' => 'Splicewire\\BeamAnalytics\\NoSuchProvider', 'id' => 'X-123'],
+            'mystery' => ['adapter' => 'Splicewire\\Beam\\Analytics\\NoSuchProvider', 'id' => 'X-123'],
         ]);
 
         $this->assertSame('', trim($this->renderHead()));

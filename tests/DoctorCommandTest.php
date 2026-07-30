@@ -1,6 +1,6 @@
 <?php
 
-namespace Splicewire\BeamAnalytics\Tests;
+namespace Splicewire\Beam\Analytics\Tests;
 
 use PHPUnit\Framework\Attributes\Test;
 
@@ -61,7 +61,7 @@ class DoctorCommandTest extends TestCase
     public function an_unknown_provider_name_fails(): void
     {
         $this->configure('production', [
-            'mystery' => ['adapter' => 'Splicewire\\BeamAnalytics\\NoSuchProvider', 'id' => 'X-1'],
+            'mystery' => ['adapter' => 'Splicewire\\Beam\\Analytics\\NoSuchProvider', 'id' => 'X-1'],
         ]);
         $this->rootTemplateWith('@beamAnalyticsHead @beamAnalyticsBody');
 

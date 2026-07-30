@@ -1,9 +1,9 @@
 <?php
 
-namespace Splicewire\BeamAnalytics\Console;
+namespace Splicewire\Beam\Analytics\Console;
 
 use Illuminate\Console\Command;
-use Splicewire\BeamAnalytics\AnalyticsManager;
+use Splicewire\Beam\Analytics\AnalyticsManager;
 
 /**
  * `php artisan beam-analytics:doctor` — verify a site's analytics wiring without loading

@@ -1,10 +1,10 @@
 <?php
 
-namespace Splicewire\BeamAnalytics\Tests;
+namespace Splicewire\Beam\Analytics\Tests;
 
 use Orchestra\Testbench\TestCase as Orchestra;
-use Splicewire\BeamAnalytics\BeamAnalyticsServiceProvider;
-use Splicewire\BeamAnalytics\Providers\GtmProvider;
+use Splicewire\Beam\Analytics\BeamAnalyticsServiceProvider;
+use Splicewire\Beam\Analytics\Providers\GtmProvider;
 
 class TestCase extends Orchestra
 {

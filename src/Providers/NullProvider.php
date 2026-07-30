@@ -1,8 +1,8 @@
 <?php
 
-namespace Splicewire\BeamAnalytics\Providers;
+namespace Splicewire\Beam\Analytics\Providers;
 
-use Splicewire\BeamAnalytics\Contracts\AnalyticsProvider;
+use Splicewire\Beam\Analytics\Contracts\AnalyticsProvider;
 
 /**
  * The fail-closed sentinel. The manager resolves a provider to this whenever the
