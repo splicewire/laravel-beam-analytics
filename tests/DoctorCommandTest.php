@@ -31,7 +31,7 @@ class DoctorCommandTest extends TestCase
         $this->configure('production', ['gtm' => $this->gtm('GTM-ABC123')]);
         $this->rootTemplateWith('<head>@beamAnalyticsHead</head><body>@beamAnalyticsBody</body>');
 
-        $this->artisan('beam-analytics:doctor')
+        $this->artisan('splicewire:beam:analytics-doctor')
             ->expectsOutputToContain("Provider 'gtm': keyed")
             ->assertSuccessful();
     }
@@ -41,7 +41,7 @@ class DoctorCommandTest extends TestCase
     {
         $this->configure('production', []);
 
-        $this->artisan('beam-analytics:doctor')
+        $this->artisan('splicewire:beam:analytics-doctor')
             ->expectsOutputToContain('Analytics off')
             ->assertSuccessful();
     }
@@ -52,7 +52,7 @@ class DoctorCommandTest extends TestCase
         $this->configure('production', ['gtm' => $this->gtm('')]);
         $this->rootTemplateWith('@beamAnalyticsHead @beamAnalyticsBody');
 
-        $this->artisan('beam-analytics:doctor')
+        $this->artisan('splicewire:beam:analytics-doctor')
             ->expectsOutputToContain('id is empty')
             ->assertFailed();
     }
@@ -65,7 +65,7 @@ class DoctorCommandTest extends TestCase
         ]);
         $this->rootTemplateWith('@beamAnalyticsHead @beamAnalyticsBody');
 
-        $this->artisan('beam-analytics:doctor')
+        $this->artisan('splicewire:beam:analytics-doctor')
             ->expectsOutputToContain('unknown/unresolvable adapter')
             ->assertFailed();
     }
@@ -76,7 +76,7 @@ class DoctorCommandTest extends TestCase
         $this->configure('production', ['gtm' => $this->gtm('GTM-ABC123')]);
         $this->rootTemplateWith('<head></head><body></body>');
 
-        $this->artisan('beam-analytics:doctor')
+        $this->artisan('splicewire:beam:analytics-doctor')
             ->expectsOutputToContain('not found in any root template')
             ->assertFailed();
     }

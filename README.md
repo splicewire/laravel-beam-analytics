@@ -66,7 +66,7 @@ BEAM_ANALYTICS_GTM_ID=GTM-XXXXXXX
 ## Doctor
 
 ```bash
-php artisan beam-analytics:doctor
+php artisan splicewire:beam:analytics-doctor
 ```
 
 Asserts the directive pair is placed in a root template and that every configured provider

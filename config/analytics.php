@@ -56,7 +56,7 @@ return [
     | Root templates (doctor)
     |--------------------------------------------------------------------------
     |
-    | Candidate root Blade templates `beam-analytics:doctor` greps to confirm the
+    | Candidate root Blade templates `splicewire:beam:analytics-doctor` greps to confirm the
     | directive pair is placed. Both fleet root-Blade shapes live here:
     | splicewire-app's `resources/views/app.blade.php` and the satellite default.
     | Doctor passes if ANY listed template that exists carries both directives.
