@@ -6,7 +6,7 @@ use Illuminate\Console\Command;
 use Splicewire\Beam\Analytics\AnalyticsManager;
 
 /**
- * `php artisan splicewire:beam:analytics-doctor` — verify a site's analytics wiring without loading
+ * `php artisan splicewire:beam:analytics:doctor` — verify a site's analytics wiring without loading
  * it in a browser. Three checks:
  *
  *   1. Directive placement — at least one configured root Blade template carries BOTH
@@ -23,7 +23,7 @@ use Splicewire\Beam\Analytics\AnalyticsManager;
  */
 class BeamAnalyticsDoctorCommand extends Command
 {
-    protected $signature = 'splicewire:beam:analytics-doctor';
+    protected $signature = 'splicewire:beam:analytics:doctor';
 
     protected $description = 'Verify analytics wiring: directive placement and per-provider config coherence.';
 
