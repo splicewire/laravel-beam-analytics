@@ -80,4 +80,29 @@ class DoctorCommandTest extends TestCase
             ->expectsOutputToContain('not found in any root template')
             ->assertFailed();
     }
+
+    // --- --floor (particle-doctrine-followups ticket 08): the unverified-placement WARN is the
+    // --- only non-pass finding, so the floor is the only variable between these two runs.
+
+    #[Test]
+    public function an_unverified_directive_placement_passes_at_the_default_fail_floor(): void
+    {
+        $this->configure('production', ['gtm' => $this->gtm('GTM-ABC123')]);
+        config(['analytics.root_templates' => []]);
+
+        $this->artisan('splicewire:beam:analytics:doctor')
+            ->expectsOutputToContain('Directive placement unverified')
+            ->assertSuccessful();
+    }
+
+    #[Test]
+    public function an_unverified_directive_placement_fails_at_a_warn_floor(): void
+    {
+        $this->configure('production', ['gtm' => $this->gtm('GTM-ABC123')]);
+        config(['analytics.root_templates' => []]);
+
+        $this->artisan('splicewire:beam:analytics:doctor', ['--floor' => 'warn'])
+            ->expectsOutputToContain('Directive placement unverified')
+            ->assertFailed();
+    }
 }
