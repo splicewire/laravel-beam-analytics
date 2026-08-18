@@ -14,7 +14,7 @@ class BeamAnalyticsServiceProvider extends PackageServiceProvider
     {
         $package
             ->name('laravel-beam-analytics')
-            ->hasConfigFile('analytics')
+            ->hasConfigFile('beam/analytics')
             ->hasCommand(BeamAnalyticsDoctorCommand::class);
     }
 

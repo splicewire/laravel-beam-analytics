@@ -22,7 +22,7 @@ class DoctorCommandTest extends TestCase
     {
         $this->template = sys_get_temp_dir().'/beam-analytics-root-'.uniqid().'.blade.php';
         file_put_contents($this->template, $blade);
-        config(['analytics.root_templates' => [$this->template]]);
+        config(['beam.analytics.root_templates' => [$this->template]]);
     }
 
     #[Test]
@@ -88,7 +88,7 @@ class DoctorCommandTest extends TestCase
     public function an_unverified_directive_placement_passes_at_the_default_fail_floor(): void
     {
         $this->configure('production', ['gtm' => $this->gtm('GTM-ABC123')]);
-        config(['analytics.root_templates' => []]);
+        config(['beam.analytics.root_templates' => []]);
 
         $this->artisan('splicewire:beam:analytics:doctor')
             ->expectsOutputToContain('Directive placement unverified')
@@ -99,7 +99,7 @@ class DoctorCommandTest extends TestCase
     public function an_unverified_directive_placement_fails_at_a_warn_floor(): void
     {
         $this->configure('production', ['gtm' => $this->gtm('GTM-ABC123')]);
-        config(['analytics.root_templates' => []]);
+        config(['beam.analytics.root_templates' => []]);
 
         $this->artisan('splicewire:beam:analytics:doctor', ['--floor' => 'warn'])
             ->expectsOutputToContain('Directive placement unverified')

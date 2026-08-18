@@ -23,8 +23,8 @@ class TestCase extends Orchestra
     {
         config([
             'app.env' => $env,
-            'analytics.enabled_envs' => $enabledEnvs,
-            'analytics.providers' => $providers,
+            'beam.analytics.enabled_envs' => $enabledEnvs,
+            'beam.analytics.providers' => $providers,
         ]);
     }
 

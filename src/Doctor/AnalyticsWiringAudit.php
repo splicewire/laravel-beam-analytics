@@ -97,7 +97,7 @@ class AnalyticsWiringAudit implements DoctorAudit
         $placed = [];
         $checked = [];
 
-        foreach ((array) config('analytics.root_templates', []) as $path) {
+        foreach ((array) config('beam.analytics.root_templates', []) as $path) {
             $path = (string) $path;
             if ($path === '' || ! is_file($path)) {
                 continue;

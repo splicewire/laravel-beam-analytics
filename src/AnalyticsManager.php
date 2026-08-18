@@ -39,7 +39,7 @@ class AnalyticsManager
     /** Whether the current env is allowed to emit tags at all. */
     public function envAllowed(): bool
     {
-        $envs = (array) $this->config->get('analytics.enabled_envs', []);
+        $envs = (array) $this->config->get('beam.analytics.enabled_envs', []);
 
         return in_array((string) $this->config->get('app.env'), $envs, true);
     }
@@ -56,7 +56,7 @@ class AnalyticsManager
     {
         $out = [];
 
-        foreach ((array) $this->config->get('analytics.providers', []) as $name => $def) {
+        foreach ((array) $this->config->get('beam.analytics.providers', []) as $name => $def) {
             $id = trim((string) ($def['id'] ?? ''));
             $adapter = $def['adapter'] ?? null;
             $known = is_string($adapter)
