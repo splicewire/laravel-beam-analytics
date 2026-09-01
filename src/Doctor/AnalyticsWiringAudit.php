@@ -38,7 +38,7 @@ class AnalyticsWiringAudit implements DoctorAudit
 
         // --- Empty config: analytics intentionally off -------------------------------
         if ($statuses === []) {
-            return [Finding::pass('Analytics off', 'no providers configured — nothing to render (this is fine).')];
+            return [Finding::inconclusive('Analytics off', 'no providers configured — nothing to render (this is fine).')];
         }
 
         $findings = [];
