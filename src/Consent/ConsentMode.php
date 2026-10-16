@@ -19,6 +19,20 @@ class ConsentMode
 {
     public function __construct(private Repository $config) {}
 
+    /**
+     * The European Economic Area as Consent Mode regions — ISO 3166-2 (here the alpha-2 country codes):
+     * the EU-27 plus Iceland, Liechtenstein and Norway. Consent Mode matches `region` against these codes,
+     * NOT the word "EEA", so the config token `EEA` is expanded to this list before rendering — otherwise
+     * every EEA visitor matches no region default and falls through to the GRANTED global, which is exactly
+     * the fail-OPEN this fail-closed block exists to prevent.
+     *
+     * @var list<string>
+     */
+    private const EEA_REGIONS = [
+        'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV',
+        'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'IS', 'LI', 'NO',
+    ];
+
     /** The <script> that sets Consent Mode defaults, or '' when consent handling is turned off in config. */
     public function head(): string
     {
@@ -28,10 +42,21 @@ class ConsentMode
             return '';
         }
 
-        $regions = array_values(array_filter(array_map(
-            fn ($r): string => trim((string) $r),
-            (array) ($consent['denied_regions'] ?? ['EEA', 'GB', 'CH']),
-        )));
+        // Expand the `EEA` shorthand to its ISO 3166-2 country codes; Consent Mode ignores the word "EEA"
+        // and would silently grant analytics storage to every EEA visitor (fail-open) if it were sent raw.
+        $regions = [];
+        foreach ((array) ($consent['denied_regions'] ?? ['EEA', 'GB', 'CH']) as $region) {
+            $region = trim((string) $region);
+            if ($region === '') {
+                continue;
+            }
+            if (strtoupper($region) === 'EEA') {
+                $regions = array_merge($regions, self::EEA_REGIONS);
+            } else {
+                $regions[] = $region;
+            }
+        }
+        $regions = array_values(array_unique($regions));
 
         $regionsJson = json_encode($regions, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
 

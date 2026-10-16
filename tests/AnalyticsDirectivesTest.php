@@ -99,7 +99,13 @@ class AnalyticsDirectivesTest extends TestCase
         $this->assertStringContainsString("gtag('consent','default'", $head);
         $this->assertStringContainsString("'ad_storage':'denied'", $head);
         $this->assertStringContainsString("'analytics_storage':'denied'", $head);
-        $this->assertStringContainsString('EEA', $head);
+        // ADR-0237 d7 / EP-04 HIGH-1: the region default must use ISO 3166-2 codes, not the word "EEA"
+        // (Consent Mode ignores "EEA", which would fail OPEN for the EU). The EEA shorthand expands to the
+        // country codes — DE, FR, IS present — and no literal "EEA" reaches gtag.
+        $this->assertStringContainsString('"DE"', $head);
+        $this->assertStringContainsString('"FR"', $head);
+        $this->assertStringContainsString('"IS"', $head);
+        $this->assertStringNotContainsString('EEA', $head);
 
         $this->assertLessThan(
             strpos($head, 'googletagmanager.com/gtm.js'),
