@@ -1,5 +1,6 @@
 <?php
 
+use Splicewire\Beam\Analytics\Providers\GaProvider;
 use Splicewire\Beam\Analytics\Providers\GtmProvider;
 
 return [
@@ -49,6 +50,36 @@ return [
             // INSIDE the container, so migrate the id to a container when you can.
             'id' => env('BEAM_ANALYTICS_GTM_ID', env('GOOGLE_ANALYTICS_ID')),
         ],
+
+        // ADR-0237 decision 5's provider half — a Google Analytics 4 adapter that renders gtag.js for a
+        // measurement id (G-XXXX). Config-driven and OFF until it has an id, exactly like `gtm`; it proves
+        // the id port resolves two providers. The Hosted-site, tenancy-rebound GA4 id for a Site Host is
+        // EP-33, not this entry. Prefer ONE provider per site (a GTM container OR a GA4 tag), not both.
+        'ga4' => [
+            'adapter' => GaProvider::class,
+            'id' => env('BEAM_ANALYTICS_GA4_ID'),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Consent Mode defaults (ADR-0237 decision 7)
+    |--------------------------------------------------------------------------
+    |
+    | Fail-closed Consent Mode defaults, set BEFORE any provider's loader whenever a tag renders. Ad
+    | signals are denied EVERYWHERE (no beam site runs ads); analytics storage is denied in the regions
+    | where the law asks for opt-in and granted elsewhere. `denied_regions` defaults to the EEA, the
+    | United Kingdom (GB) and Switzerland (CH). The central site and a Connected site may change the list
+    | here; a Hosted site uses its install's. The consent NOTICE (a Code Component that calls the tag's
+    | consent update) is deferred, with its shape set. Set `enabled` to false to render no consent block.
+    |
+    */
+    'consent' => [
+        'enabled' => (bool) env('BEAM_ANALYTICS_CONSENT', true),
+        'denied_regions' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('BEAM_ANALYTICS_CONSENT_DENIED_REGIONS', 'EEA,GB,CH')),
+        ))),
     ],
 
     /*

@@ -3,6 +3,8 @@
 namespace Splicewire\Beam\Analytics;
 
 use Illuminate\Contracts\Config\Repository;
+use Splicewire\Beam\Analytics\Consent\ConsentMode;
+use Splicewire\Beam\Analytics\Contracts\AnalyticsIdResolver;
 use Splicewire\Beam\Analytics\Contracts\AnalyticsProvider;
 use Splicewire\Beam\Analytics\Providers\NullProvider;
 
@@ -57,7 +59,10 @@ class AnalyticsManager
         $out = [];
 
         foreach ((array) $this->config->get('beam.analytics.providers', []) as $name => $def) {
-            $id = trim((string) ($def['id'] ?? ''));
+            // ADR-0237 d4: the id is resolved per request through the AnalyticsIdResolver port, not read
+            // straight from config here. The default (ConfigIdResolver) reads this provider's config `id`,
+            // as before; the tenancy layer rebinds the port for a Site Host (EP-33).
+            $id = trim((string) app(AnalyticsIdResolver::class)->idFor((string) $name));
             $adapter = $def['adapter'] ?? null;
             $known = is_string($adapter)
                 && class_exists($adapter)
@@ -98,6 +103,18 @@ class AnalyticsManager
         return $providers;
     }
 
+    /** Whether any configured provider is active (keyed + resolvable) — so a tag, and consent, will render. */
+    public function hasActiveProvider(): bool
+    {
+        foreach ($this->providerStatuses() as $status) {
+            if ($status['status'] === 'active') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function render(string $slot): string
     {
         if (! $this->envAllowed()) {
@@ -105,6 +122,13 @@ class AnalyticsManager
         }
 
         $out = '';
+
+        // ADR-0237 d7: Consent Mode's fail-closed defaults are set BEFORE any provider's loader, and only
+        // when a tag will actually render (an active provider). No active provider ⇒ no tag ⇒ no consent.
+        if ($slot === 'head' && $this->hasActiveProvider()) {
+            $out .= app(ConsentMode::class)->head();
+        }
+
         foreach ($this->providers() as $provider) {
             $out .= $provider->{$slot}();
         }

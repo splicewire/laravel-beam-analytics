@@ -21,6 +21,14 @@ class BeamAnalyticsServiceProvider extends PackageServiceProvider
     public function packageRegistered(): void
     {
         $this->app->singleton(AnalyticsManager::class);
+
+        // ADR-0237 d4 — the id port's default: ids come from config, as before. Bound (not singleton) so
+        // the tenancy layer can rebind it per request for a Site Host (EP-33) without this package knowing
+        // about tenancy. Resolved lazily by the manager at render time, so a rebind takes effect.
+        $this->app->bind(
+            \Splicewire\Beam\Analytics\Contracts\AnalyticsIdResolver::class,
+            \Splicewire\Beam\Analytics\Resolvers\ConfigIdResolver::class,
+        );
     }
 
     public function packageBooted(): void

@@ -4,6 +4,8 @@ namespace Splicewire\Beam\Analytics\Tests;
 
 use Illuminate\Support\Facades\Blade;
 use PHPUnit\Framework\Attributes\Test;
+use Splicewire\Beam\Analytics\Contracts\AnalyticsIdResolver;
+use Splicewire\Beam\Analytics\Providers\GaProvider;
 use Splicewire\Beam\Analytics\Providers\GtmProvider;
 
 /**
@@ -83,6 +85,66 @@ class AnalyticsDirectivesTest extends TestCase
         ]);
 
         $this->assertSame('', trim($this->renderHead()));
+        $this->assertSame('', trim($this->renderBody()));
+    }
+
+    #[Test]
+    public function a_keyed_provider_sets_consent_defaults_before_its_loader(): void
+    {
+        // ADR-0237 d7: Consent Mode's fail-closed defaults render BEFORE the provider loader — ad signals
+        // denied everywhere, analytics denied in the listed regions (EEA/GB/CH by default).
+        $this->configure('production', ['gtm' => $this->gtm('GTM-ABC123')]);
+
+        $head = $this->renderHead();
+        $this->assertStringContainsString("gtag('consent','default'", $head);
+        $this->assertStringContainsString("'ad_storage':'denied'", $head);
+        $this->assertStringContainsString("'analytics_storage':'denied'", $head);
+        $this->assertStringContainsString('EEA', $head);
+
+        $this->assertLessThan(
+            strpos($head, 'googletagmanager.com/gtm.js'),
+            strpos($head, "gtag('consent','default'"),
+            'Consent defaults must render before the tag loader.',
+        );
+    }
+
+    #[Test]
+    public function the_provider_id_resolves_through_the_id_port(): void
+    {
+        // ADR-0237 d4: the id comes through the AnalyticsIdResolver port, not straight from config.
+        // Rebinding the port (as the tenancy layer does for a Site Host, EP-33) changes the rendered id
+        // without touching the config value.
+        $this->configure('production', ['gtm' => $this->gtm('GTM-CONFIG01')]);
+        $this->app->bind(AnalyticsIdResolver::class, fn () => new class implements AnalyticsIdResolver
+        {
+            public function idFor(string $provider): ?string
+            {
+                return 'GTM-PORT9999';
+            }
+        });
+
+        $head = $this->renderHead();
+        $this->assertStringContainsString('GTM-PORT9999', $head);
+        $this->assertStringNotContainsString('GTM-CONFIG01', $head);
+    }
+
+    #[Test]
+    public function a_keyed_ga4_provider_renders_gtag_with_no_noscript_body(): void
+    {
+        // ADR-0237 d5's provider half (config-driven in EP-04): a GA4 adapter renders gtag.js for a
+        // measurement id and has no <noscript> body; consent still precedes it.
+        $this->configure('production', ['ga4' => ['adapter' => GaProvider::class, 'id' => 'G-TEST12345']]);
+
+        $head = $this->renderHead();
+        $this->assertStringContainsString('gtag/js?id=G-TEST12345', $head);
+        $this->assertStringContainsString('G-TEST12345', $head);
+        $this->assertStringContainsString("gtag('config',", $head);
+        $this->assertLessThan(
+            strpos($head, 'gtag/js?id='),
+            strpos($head, "gtag('consent','default'"),
+            'Consent defaults must render before the GA4 loader.',
+        );
+
         $this->assertSame('', trim($this->renderBody()));
     }
 }

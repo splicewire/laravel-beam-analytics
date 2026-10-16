@@ -47,14 +47,40 @@ class DoctorCommandTest extends TestCase
     }
 
     #[Test]
-    public function a_keyless_provider_fails(): void
+    public function a_keyless_provider_reads_as_off_not_as_a_failure(): void
     {
+        // ADR-0237 d2: a keyless provider is "Analytics off" — a WARNING inside an allowed env, never a
+        // failure. A warn passes the default (fail) floor, so the command succeeds.
         $this->configure('production', ['gtm' => $this->gtm('')]);
-        $this->rootTemplateWith('@beamAnalyticsHead @beamAnalyticsBody');
+        $this->rootTemplateWith('<head>@beamAnalyticsHead</head><body>@beamAnalyticsBody</body>');
 
         $this->artisan('splicewire:beam:analytics:doctor')
-            ->expectsOutputToContain('id is empty')
-            ->assertFailed();
+            ->expectsOutputToContain('Analytics off')
+            ->assertSuccessful();
+    }
+
+    #[Test]
+    public function a_keyless_provider_off_reading_passes_outside_an_allowed_env(): void
+    {
+        // ADR-0237 d2: outside an allowed env, "Analytics off" measured nothing — a plain pass (no warn).
+        $this->configure('local', ['gtm' => $this->gtm('')]);
+        $this->rootTemplateWith('<head>@beamAnalyticsHead</head><body>@beamAnalyticsBody</body>');
+
+        $this->artisan('splicewire:beam:analytics:doctor', ['--floor' => 'warn'])
+            ->expectsOutputToContain('Analytics off')
+            ->assertSuccessful();
+    }
+
+    #[Test]
+    public function a_slot_placement_gap_is_reported_even_without_an_id(): void
+    {
+        // ADR-0237 d2: the doctor checks slot placement whether or not a provider has an id.
+        $this->configure('production', ['gtm' => $this->gtm('')]);
+        $this->rootTemplateWith('<head></head><body></body>'); // directives NOT placed
+
+        $this->artisan('splicewire:beam:analytics:doctor')
+            ->expectsOutputToContain('not found in any root template')
+            ->assertSuccessful(); // keyless ⇒ not active ⇒ the unplaced-slot finding is a WARN, passes the default floor
     }
 
     #[Test]

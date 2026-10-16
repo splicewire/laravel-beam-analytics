@@ -35,8 +35,11 @@ class AnalyticsWiringAudit implements DoctorAudit
     public function run(): array
     {
         $statuses = $this->manager->providerStatuses();
+        $allowed = $this->manager->envAllowed();
 
-        // --- Empty config: analytics intentionally off -------------------------------
+        // --- Empty config: analytics INTENTIONALLY off (a cost-only / informational site) — a pass, as
+        // before. ADR-0237 d2's env-dependent "off" reading is for a KEYLESS provider (the package is
+        // present but has no id yet), not for a site that configures no analytics at all.
         if ($statuses === []) {
             return [Finding::inconclusive('Analytics off', 'no providers configured — nothing to render (this is fine).')];
         }
@@ -52,7 +55,8 @@ class AnalyticsWiringAudit implements DoctorAudit
                     $findings[] = Finding::pass("Provider '{$name}'", "keyed ({$s['id']}) via {$s['adapter']}.");
                     break;
                 case 'keyless':
-                    $findings[] = Finding::fail("Provider '{$name}'", 'configured but id is empty — renders nothing.');
+                    // ADR-0237 d2: a keyless provider reads as "Analytics off", NOT a failure.
+                    $findings[] = $this->offFinding("provider '{$name}' has no id", $allowed);
                     break;
                 case 'unknown':
                     $adapter = $s['adapter'] ?? '(none)';
@@ -61,20 +65,20 @@ class AnalyticsWiringAudit implements DoctorAudit
             }
         }
 
-        // --- Check 2: directive placement --------------------------------------------
-        if ($active > 0) {
-            [$placed, $checked] = $this->directivesPlaced();
+        // --- Check 2: directive placement (ADR-0237 d2: checked with or without an id) ---------------
+        [$placed, $checked] = $this->directivesPlaced();
 
-            if ($checked === []) {
-                $findings[] = Finding::warn('Directive placement unverified', 'no root template found — set `analytics.root_templates`.');
-            } elseif ($placed !== []) {
-                $findings[] = Finding::pass('Directive pair present in', implode(', ', $placed).'.');
-            } else {
-                $findings[] = Finding::fail(
-                    'Directive pair (@beamAnalyticsHead + @beamAnalyticsBody) not found in any root template',
-                    implode(', ', $checked).'.',
-                );
-            }
+        if ($checked === []) {
+            $findings[] = Finding::warn('Directive placement unverified', 'no root template found — set `analytics.root_templates`.');
+        } elseif ($placed !== []) {
+            $findings[] = Finding::pass('Directive pair present in', implode(', ', $placed).'.');
+        } else {
+            // An unplaced slot is reported with or without an id: a Fail when a provider is active (its tag
+            // cannot render), a Warn when analytics is off (nothing renders yet, but the slot is still absent).
+            $message = 'Directive pair (@beamAnalyticsHead + @beamAnalyticsBody) not found in any root template';
+            $findings[] = $active > 0
+                ? Finding::fail($message, implode(', ', $checked).'.')
+                : Finding::warn($message, implode(', ', $checked).'.');
         }
 
         // --- Check 3: env posture ----------------------------------------------------
@@ -85,6 +89,18 @@ class AnalyticsWiringAudit implements DoctorAudit
             : Finding::pass("Env '{$env}' is not allowlisted", 'all output suppressed here (renders in `enabled_envs` only).');
 
         return $findings;
+    }
+
+    /**
+     * ADR-0237 d2 — the "Analytics off" reading: a pass that measured nothing OUTSIDE an allowed
+     * environment (inconclusive — there is nothing to measure), and a WARNING inside one (a tag is
+     * expected there, but none will render).
+     */
+    private function offFinding(string $why, bool $allowed): Finding
+    {
+        return $allowed
+            ? Finding::warn('Analytics off', $why.' — but this env is allowlisted, so a tag is expected here.')
+            : Finding::inconclusive('Analytics off', $why.' — nothing renders (fine outside an allowed env).');
     }
 
     /**
