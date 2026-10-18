@@ -39,6 +39,16 @@ class BeamAnalyticsServiceProvider extends PackageServiceProvider
         Blade::directive('beamAnalyticsHead', fn () => '<?php echo app(\\Splicewire\\Beam\\Analytics\\AnalyticsManager::class)->head(); ?>');
         Blade::directive('beamAnalyticsBody', fn () => '<?php echo app(\\Splicewire\\Beam\\Analytics\\AnalyticsManager::class)->body(); ?>');
 
+        // Self-register into beam-core's install manifest so `splicewire:beam:install` publishes
+        // this package's config with the rest of the stack (B2-2 enrollment; no migrations here).
+        if ($this->app->bound('Splicewire\\Beam\\Install\\BeamInstallManifest')) {
+            $this->app->make('Splicewire\\Beam\\Install\\BeamInstallManifest')->register(
+                package: 'splicewire/laravel-beam-analytics',
+                publishTags: ['beam-analytics-config'],
+                migrates: false,
+            );
+        }
+
         // Register the wiring audit — ADVISORY — DOWN into beam-core's doctor aggregation manifest,
         // so one `splicewire:beam:doctor` run reports it with the rest of the family. Guarded by
         // string class-name so this package keeps booting in a host without beam-core installed
