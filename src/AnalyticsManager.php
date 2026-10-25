@@ -117,6 +117,12 @@ class AnalyticsManager
 
     private function render(string $slot): string
     {
+        // Preview state is set only by beam-ux's validated, request-scoped middleware. Never
+        // infer it from a client cookie here: analytics is suppressed only for a verified Preview.
+        if (request()->attributes->has('beam.ux.preview')) {
+            return '';
+        }
+
         if (! $this->envAllowed()) {
             return '';
         }

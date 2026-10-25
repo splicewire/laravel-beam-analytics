@@ -41,6 +41,16 @@ class AnalyticsDirectivesTest extends TestCase
     }
 
     #[Test]
+    public function a_verified_beam_ux_preview_suppresses_both_analytics_slots(): void
+    {
+        $this->configure('production', ['gtm' => $this->gtm('GTM-ABC123')]);
+        request()->attributes->set('beam.ux.preview', ['verified' => true]);
+
+        $this->assertSame('', trim($this->renderHead()));
+        $this->assertSame('', trim($this->renderBody()));
+    }
+
+    #[Test]
     public function two_keyed_providers_both_render_concatenated(): void
     {
         // Two independently-keyed providers (both GTM adapters, distinct ids) prove the
