@@ -4,6 +4,7 @@ namespace Splicewire\Beam\Analytics\Tests;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
+use Splicewire\Beam\Analytics\BeamAnalyticsServiceProvider;
 use Splicewire\Beam\Analytics\Events\EventVocabulary;
 
 /**
@@ -61,6 +62,25 @@ class EventVocabularyTest extends TestCase
         $this->expectExceptionMessage('sign_up');
 
         $this->vocabulary(['sign_up' => ['method', 'plan']])->all();
+    }
+
+    #[Test]
+    public function a_colliding_host_name_is_refused_at_boot(): void
+    {
+        config()->set('beam.analytics.events', ['login' => ['method']]);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('login');
+
+        (new BeamAnalyticsServiceProvider($this->app))->packageBooted();
+    }
+
+    #[Test]
+    public function has_validates_the_vocabulary_before_answering_a_package_name(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->vocabulary(['sign_up' => []])->has('sign_up');
     }
 
     #[Test]

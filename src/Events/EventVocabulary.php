@@ -48,7 +48,16 @@ class EventVocabulary
 
     public function has(string $name): bool
     {
-        return array_key_exists($name, self::PACKAGE) || array_key_exists($name, $this->hostEvents());
+        // Validate the whole vocabulary first: a package name must not short-circuit past a misdeclared host half.
+        $host = $this->hostEvents();
+
+        return array_key_exists($name, self::PACKAGE) || array_key_exists($name, $host);
+    }
+
+    /** Refuse a misdeclared host vocabulary at boot (EP29-SLICE-PLAN contract item 3), not on its first use. */
+    public function validate(): void
+    {
+        $this->hostEvents();
     }
 
     /** @return array<string, list<string>> */

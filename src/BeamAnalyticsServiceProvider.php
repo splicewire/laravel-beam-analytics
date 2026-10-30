@@ -7,6 +7,7 @@ use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Splicewire\Beam\Analytics\Console\BeamAnalyticsDoctorCommand;
 use Splicewire\Beam\Analytics\Doctor\AnalyticsWiringAudit;
+use Splicewire\Beam\Analytics\Events\EventVocabulary;
 
 class BeamAnalyticsServiceProvider extends PackageServiceProvider
 {
@@ -33,6 +34,9 @@ class BeamAnalyticsServiceProvider extends PackageServiceProvider
 
     public function packageBooted(): void
     {
+        // ADR-0237 d8: a host's Event Vocabulary is refused at boot when it redeclares a package name or is not GA4-shaped.
+        $this->app->make(EventVocabulary::class)->validate();
+
         // The injection seam: two directives, placement-agnostic across both fleet
         // root-Blade shapes (@inertiaHead/@inertia; <x-inertia::head>/<x-inertia::app/>).
         // @beamAnalyticsHead goes in <head>; @beamAnalyticsBody immediately after <body>.
