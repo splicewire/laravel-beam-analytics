@@ -84,6 +84,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Event Vocabulary (ADR-0237 decision 8)
+    |--------------------------------------------------------------------------
+    |
+    | The Analytics Events this host reports beside the package's (GA4's recommended sign_up, login,
+    | generate_lead, search, begin_checkout, purchase and select_content). Each is `name => [parameters]`:
+    | a GA4 event name (a letter, then letters, digits or underscores, at most 40) that is not one of the
+    | package's. The Manifest Profile serves both halves as `x-events`, and a block's Click Event must
+    | name one of them.
+    |
+    */
+    'events' => [],
+
+    /*
+    |--------------------------------------------------------------------------
     | Root templates (doctor)
     |--------------------------------------------------------------------------
     |
