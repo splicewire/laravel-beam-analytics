@@ -1,0 +1,63 @@
+---
+title: Analytics Events
+segment: beam.analytics.events
+nav_order: 100
+excerpt: The Analytics Events a site may report, each with its parameter names.
+---
+
+# Analytics Events
+
+`beam.analytics.events` holds the **Event Vocabulary**: every Analytics Event a site may report, keyed by its GA4 event
+name, with its parameter names as the entry. Declaring an event does not emit it. The Manifest Profile serves the
+vocabulary as `x-events`, and a block's Click Event must name one of them.
+
+It reads in a fixed order: the names this package ships, then package contributions, then the host's own from
+`config('beam.analytics.events')`.
+
+{/* registry-facts:start — generated from the #[IsRegistry] declaration; regenerate it, do not edit between these markers. */}
+
+- **Root:** `beam.analytics.events`
+- **Entries:** `list<string>`
+- **Duplicate keys:** Reject — registering a taken key throws
+- **Population:** Optional — an empty registry is normal
+- **Order:** `100` (display order, ascending)
+- **Declared by:** `Splicewire\Beam\Analytics\Events\AnalyticsEventRegistry`
+
+{/* registry-facts:end */}
+
+<RegistryRegistrants root="beam.analytics.events" />
+
+## What ships
+
+GA4's recommended names for what packaged surfaces do: `sign_up`, `login`, `generate_lead`, `search`, `begin_checkout`,
+`purchase` and `select_content`.
+
+## Contributing an event
+
+Register the name and its parameters from your own service provider. Name the registry as a string, so your package needs
+no composer edge to this one:
+
+```php
+$this->app->afterResolving(
+    'Splicewire\Beam\Analytics\Events\AnalyticsEventRegistry',
+    fn ($registry) => $registry->register('song_shared', ['song_id'], 'acme/songs'),
+);
+```
+
+A contribution is served as `source: package`. A host declares its own in config:
+
+```php
+'events' => [
+    'demo_requested' => ['source'],
+],
+```
+
+## What refuses
+
+All of these refuse at boot:
+
+- a name GA4 would not accept: a letter, then letters, digits or underscores, at most 40 characters;
+- parameters that are not a list of strings;
+- a host or a contribution redeclaring a name this package ships;
+- a host redeclaring a contribution;
+- a second contribution of a name with different parameters.

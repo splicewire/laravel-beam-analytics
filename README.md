@@ -56,7 +56,9 @@ Both adapters ship:
 Prefer one measurement route: a GTM container carrying GA4 **or** direct GA4. Every active
 provider renders, so enabling both for the same property can duplicate measurement. Direct
 GA4 renders `gtag.js` in the head and no body markup. Other adapters implement
-`Splicewire\Beam\Analytics\Contracts\AnalyticsProvider` and join the `providers` config map.
+`Splicewire\Beam\Analytics\Contracts\AnalyticsProvider` and join the `providers` config map, or a
+package registers one through the [`beam.analytics.providers`](docs/registries/beam.analytics.providers.mdx)
+registry with no composer edge to this package.
 
 The GTM id falls back to `GOOGLE_ANALYTICS_ID` only when its namespaced variable is unset;
 an explicitly empty `BEAM_ANALYTICS_GTM_ID` disables that fallback. Ids resolve lazily through
@@ -103,7 +105,9 @@ Names must start with an ASCII letter, contain only letters, digits or underscor
 at most 40 characters. A host cannot redeclare a package event. Parameters must be a list
 of strings. The provider calls `EventVocabulary::validate()` at boot and invalid declarations
 throw `InvalidArgumentException`; `has()` and `all()` also validate the host vocabulary.
-Tenant-added event names are deferred.
+Tenant-added event names are deferred. A package adds its own through the
+[`beam.analytics.events`](docs/registries/beam.analytics.events.mdx) registry; those names are
+served after the package's and before the host's, as `source: 'package'`.
 
 ```php
 use Splicewire\Beam\Analytics\Events\EventVocabulary;

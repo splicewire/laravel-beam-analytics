@@ -1,0 +1,61 @@
+---
+title: Tag providers
+segment: beam.analytics.providers
+nav_order: 100
+excerpt: The tag providers a site renders in its two analytics slots, keyed by name.
+---
+
+# Tag providers
+
+`beam.analytics.providers` holds the **tag providers**: the adapters that write a measurement tag into a site's
+`@beamAnalyticsHead` and `@beamAnalyticsBody` slots. Providers are not exclusive. Every provider with an id and a
+resolvable adapter renders, concatenated, in the order the map holds them.
+
+The map is `config('beam.analytics.providers')`, and it stays the source: a registration writes into config. So
+anything reading `beam.analytics.providers.<name>.id` or `.adapter`, such as the `AnalyticsIdResolver` implementations,
+reads a contributed provider the same way it reads a configured one.
+
+{/* registry-facts:start — generated from the #[IsRegistry] declaration; regenerate it, do not edit between these markers. */}
+
+- **Root:** `beam.analytics.providers`
+- **Entries:** `array{adapter: class-string<Splicewire\Beam\Analytics\Contracts\AnalyticsProvider>, id?: ?string}`
+- **Duplicate keys:** Reject — registering a taken key throws
+- **Population:** Optional — an empty registry is normal
+- **Order:** `100` (display order, ascending)
+- **Declared by:** `Splicewire\Beam\Analytics\Providers\AnalyticsProviderRegistry`
+
+{/* registry-facts:end */}
+
+<RegistryRegistrants root="beam.analytics.providers" />
+
+## What ships
+
+`gtm` renders a Google Tag Manager container and `ga4` renders `gtag.js`. Both stay off until they have an id. Prefer one
+of them per property, because every active provider renders.
+
+## Contributing a provider
+
+Implement `AnalyticsProvider`, then register an entry from your own service provider. Name the registry as a string, so
+your package needs no composer edge to this one and your callback never runs on a host without it:
+
+```php
+$this->app->afterResolving(
+    'Splicewire\Beam\Analytics\Providers\AnalyticsProviderRegistry',
+    fn ($registry) => $registry->register('plausible', [
+        'adapter' => PlausibleProvider::class,
+        'id' => config('plausible.site'),
+    ]),
+);
+```
+
+Keys are lowercase and dotless (`plausible`, `gtm_secondary`). Contribute from `register()` or `boot()`: the registry is
+first resolved once every provider has booted.
+
+## What refuses, and what stays silent
+
+- **A configured entry never refuses a boot.** An unknown adapter or an empty id renders nothing, and
+  `splicewire:beam:analytics:doctor` reports it.
+- **A registration refuses at boot** when its adapter is not an `AnalyticsProvider` or its `id` is not a string, and when
+  its key is already declared with a different adapter.
+- **A key already declared with the same adapter keeps what is stored.** A host can therefore set a contributed
+  provider's id in its own config, and a cached config keeps working when the contribution registers again.

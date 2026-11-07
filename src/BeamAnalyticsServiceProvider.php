@@ -7,7 +7,9 @@ use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Splicewire\Beam\Analytics\Console\BeamAnalyticsDoctorCommand;
 use Splicewire\Beam\Analytics\Doctor\AnalyticsWiringAudit;
+use Splicewire\Beam\Analytics\Events\AnalyticsEventRegistry;
 use Splicewire\Beam\Analytics\Events\EventVocabulary;
+use Splicewire\Beam\Analytics\Providers\AnalyticsProviderRegistry;
 
 class BeamAnalyticsServiceProvider extends PackageServiceProvider
 {
@@ -22,6 +24,8 @@ class BeamAnalyticsServiceProvider extends PackageServiceProvider
     public function packageRegistered(): void
     {
         $this->app->singleton(AnalyticsManager::class);
+        $this->app->singleton(AnalyticsProviderRegistry::class);
+        $this->app->singleton(AnalyticsEventRegistry::class);
 
         // ADR-0237 d4 — the id port's default: ids come from config, as before. Bound (not singleton) so
         // the tenancy layer can rebind it per request for a Site Host (EP-33) without this package knowing
@@ -35,7 +39,12 @@ class BeamAnalyticsServiceProvider extends PackageServiceProvider
     public function packageBooted(): void
     {
         // ADR-0237 d8: a host's Event Vocabulary is refused at boot when it redeclares a package name or is not GA4-shaped.
-        $this->app->make(EventVocabulary::class)->validate();
+        // Resolving the registries runs each package's afterResolving contribution, so a misdeclared one is refused here
+        // too. This waits for `booted` because a provider booting after this one must still reach them.
+        $this->app->booted(function ($app): void {
+            $app->make(AnalyticsProviderRegistry::class);
+            $app->make(EventVocabulary::class)->validate();
+        });
 
         // The injection seam: two directives, placement-agnostic across both fleet
         // root-Blade shapes (@inertiaHead/@inertia; <x-inertia::head>/<x-inertia::app/>).
