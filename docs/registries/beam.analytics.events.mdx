@@ -60,4 +60,7 @@ All of these refuse at boot:
 - parameters that are not a list of strings;
 - a host or a contribution redeclaring a name this package ships;
 - a host redeclaring a contribution;
-- a second contribution of a name with different parameters.
+- a second contribution of a name, even with identical parameters. The refusal names both registrants.
+
+A contribution may pass an ability as `register()`'s fourth argument. An installed authorizer then hides that event from
+every read, `x-events` included.

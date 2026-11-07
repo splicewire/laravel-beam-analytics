@@ -8,6 +8,7 @@ use Rushing\Popcorn\Registries\Authorizer;
 use Rushing\Popcorn\Registries\BasicRegistry;
 use Rushing\Popcorn\Registries\Gated;
 use Rushing\Popcorn\Registries\IsRegistry;
+use Rushing\Popcorn\Registries\Key;
 use Rushing\Popcorn\Registries\OnKeyDuplicate;
 use Rushing\Popcorn\Registries\PopulationRequirement;
 use Rushing\Popcorn\Registries\Registrant;
@@ -26,10 +27,11 @@ use Splicewire\Beam\Analytics\Registries\DeclaredName;
  *     ->register('song_shared', ['song_id'], 'acme/songs'));
  * ```
  *
- * Contributions are held here, and the host's half is read through on every read, because a host's vocabulary is
- * refused where it stands in config and a contribution has no place in a config file. That also keeps a contribution
- * out of a cached config. A contribution is `source: package` in {@see EventVocabulary::all()}: a host cannot redeclare
- * it any more than it can a name this package ships.
+ * The package's names and every contribution live in a held kernel store, so a write keeps its registrant and ability
+ * and a taken key throws naming both registrants, even for an identical repeat. The host's half is not copied in: it is
+ * read through and added to a copy of that store on every read, because a host's vocabulary is refused where it stands
+ * in config. A contribution is `source: package` in {@see EventVocabulary::all()}, and a host cannot redeclare it any
+ * more than it can a name this package ships.
  */
 #[IsRegistry(
     root: 'beam.analytics.events',
@@ -43,10 +45,7 @@ class AnalyticsEventRegistry implements Gated, Registry
     /** GA4's event-name rule: a letter, then letters, digits or underscores, at most 40 characters. */
     private const NAME = '/^[A-Za-z][A-Za-z0-9_]{0,39}$/';
 
-    /** @var array<string, array{parameters: list<string>, by: string|null}> */
-    private array $contributed = [];
-
-    private ?Authorizer $authorizer = null;
+    private ?BasicRegistry $held = null;
 
     public function __construct(private readonly Repository $config) {}
 
@@ -55,50 +54,35 @@ class AnalyticsEventRegistry implements Gated, Registry
      */
     public function register(RegistryKey|string $key, mixed $entry = [], ?string $by = null, ?string $ability = null): static
     {
-        $name = (string) $key;
+        $name = $this->nameOf($key);
 
         if (! preg_match(self::NAME, $name)) {
             throw new InvalidArgumentException("Analytics Event [{$name}] is not a GA4 event name: a letter, then letters, digits or underscores, at most 40 characters.");
         }
 
         $this->assertParameters($name, $entry);
-
-        if (array_key_exists($name, EventVocabulary::PACKAGE)) {
-            throw new InvalidArgumentException("Analytics Event [{$name}] is the package's; contribute a name of your own.");
-        }
-
-        if (isset($this->contributed[$name])) {
-            if ($this->contributed[$name]['parameters'] !== $entry) {
-                throw new InvalidArgumentException("Analytics Event [{$name}] is already contributed with other parameters.");
-            }
-
-            return $this;
-        }
-
-        $this->contributed[$name] = ['parameters' => $entry, 'by' => $by];
+        $this->held()->register(DeclaredName::key($name), $entry, $by, $ability);
 
         return $this;
     }
 
     /**
-     * Every declared event in its served order. Validates the host's half first, so a package name cannot answer past a
-     * misdeclared host vocabulary.
+     * Every event this caller may see, in its served order. Validates the host's half first, so a package name cannot
+     * answer past a misdeclared host vocabulary.
      *
      * @return array<string, array{source: 'package'|'host', parameters: list<string>}>
      */
     public function events(): array
     {
         $host = $this->hostEvents();
+        $store = $this->store($host);
         $events = [];
 
-        foreach (EventVocabulary::PACKAGE as $name => $parameters) {
-            $events[$name] = ['source' => 'package', 'parameters' => $parameters];
-        }
-        foreach ($this->contributed as $name => $contribution) {
-            $events[$name] = ['source' => 'package', 'parameters' => $contribution['parameters']];
-        }
-        foreach ($host as $name => $parameters) {
-            $events[$name] = ['source' => 'host', 'parameters' => $parameters];
+        foreach ($store->relativeKeys() as $name) {
+            $events[$name] = [
+                'source' => array_key_exists($name, $host) ? 'host' : 'package',
+                'parameters' => $store->resolve(DeclaredName::key($name)),
+            ];
         }
 
         return $events;
@@ -148,25 +132,59 @@ class AnalyticsEventRegistry implements Gated, Registry
 
     public function authorizeWith(?Authorizer $authorizer): static
     {
-        $this->authorizer = $authorizer;
+        $this->held()->authorizeWith($authorizer);
 
         return $this;
     }
 
-    /** The three halves projected onto the kernel's store, rebuilt per read because the host's half can change. */
-    private function store(): BasicRegistry
+    /** The package's names and the contributions, in the one store a write reaches. */
+    private function held(): BasicRegistry
     {
-        $store = BasicRegistry::for($this)->authorizeWith($this->authorizer);
+        if ($this->held === null) {
+            $this->held = BasicRegistry::for($this);
 
-        foreach ($this->events() as $name => $event) {
-            $by = $event['source'] === 'host'
-                ? Registrant::fromConfig('beam.analytics.events')
-                : ($this->contributed[$name]['by'] ?? 'splicewire/laravel-beam-analytics');
+            foreach (EventVocabulary::PACKAGE as $name => $parameters) {
+                $this->held->register(DeclaredName::key($name), $parameters, 'splicewire/laravel-beam-analytics');
+            }
+        }
 
-            $store->register(DeclaredName::key($name), $event['parameters'], $by);
+        return $this->held;
+    }
+
+    /**
+     * A copy of the held store with the host's half added, so config can change between reads and nothing of it stays.
+     *
+     * @param  array<string, list<string>>|null  $host
+     */
+    private function store(?array $host = null): BasicRegistry
+    {
+        $host ??= $this->hostEvents();
+        $store = clone $this->held();
+
+        foreach ($host as $name => $parameters) {
+            $store->register(DeclaredName::key($name), $parameters, Registrant::fromConfig('beam.analytics.events'));
         }
 
         return $store;
+    }
+
+    /** An event name, with this registry's root stripped by segment when the key is rooted. Anything else comes back whole. */
+    private function nameOf(RegistryKey|string $key): string
+    {
+        $parsed = is_string($key) ? Key::tryParse($key) : $key;
+
+        if ($parsed === null) {
+            return (string) $key;
+        }
+
+        $root = IsRegistry::of($this)->rootKey()->segments();
+        $segments = $parsed->segments();
+
+        if (array_slice($segments, 0, count($root)) === $root) {
+            $segments = array_slice($segments, count($root));
+        }
+
+        return implode(Key::SEPARATOR, $segments);
     }
 
     private function keyOf(RegistryKey|string $key): RegistryKey
@@ -177,6 +195,7 @@ class AnalyticsEventRegistry implements Gated, Registry
     /** @return array<string, list<string>> */
     private function hostEvents(): array
     {
+        $taken = $this->held()->unfiltered();
         $events = [];
 
         foreach ((array) $this->config->get('beam.analytics.events', []) as $name => $parameters) {
@@ -184,7 +203,7 @@ class AnalyticsEventRegistry implements Gated, Registry
             if (! preg_match(self::NAME, $name)) {
                 throw new InvalidArgumentException("Analytics Event [{$name}] is not a GA4 event name: a letter, then letters, digits or underscores, at most 40 characters.");
             }
-            if (array_key_exists($name, EventVocabulary::PACKAGE) || isset($this->contributed[$name])) {
+            if ($taken->has(DeclaredName::key($name))) {
                 throw new InvalidArgumentException("Analytics Event [{$name}] is the package's; a host declares its own names beside it, not over it.");
             }
             $this->assertParameters($name, $parameters);

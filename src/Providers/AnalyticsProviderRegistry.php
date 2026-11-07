@@ -4,10 +4,12 @@ namespace Splicewire\Beam\Analytics\Providers;
 
 use InvalidArgumentException;
 use Rushing\Popcorn\Laravel\Registries\ConfigRegistry;
+use Rushing\Popcorn\Registries\Exceptions\DuplicateRegistryKey;
 use Rushing\Popcorn\Registries\IsRegistry;
 use Rushing\Popcorn\Registries\Key;
 use Rushing\Popcorn\Registries\OnKeyDuplicate;
 use Rushing\Popcorn\Registries\PopulationRequirement;
+use Rushing\Popcorn\Registries\Registrant;
 use Rushing\Popcorn\Registries\RegistryKey;
 use Splicewire\Beam\Analytics\Contracts\AnalyticsProvider;
 use Splicewire\Beam\Analytics\Registries\DeclaredName;
@@ -29,9 +31,13 @@ use Splicewire\Beam\Analytics\Registries\DeclaredName;
  *
  * The two ways in differ on purpose. A map in config is not validated here: a keyless provider or an unknown adapter
  * renders nothing and the doctor reports it (ADR-0237), so it never refuses a boot. {@see register()} is new code
- * calling new code, so it refuses a misdeclared entry, and a key that names a different adapter. A key that names the
- * same adapter keeps what is stored, which lets a host set a contributed provider's id in its config. It is also what
- * keeps a cached config working, because `config:cache` stores contributions and they register again on every boot.
+ * calling new code, so it refuses a misdeclared entry.
+ *
+ * A second registration of a key on one instance throws {@see DuplicateRegistryKey} naming both registrants, even for
+ * an identical entry. So does a first registration whose key config already holds with another adapter. A first
+ * registration whose key config already holds with the same adapter keeps config and counts as the key's registration.
+ * That is what lets a host set a contributed provider's id, and it keeps a cached config working, because `config:cache`
+ * stores contributions and they register again on every boot.
  */
 #[IsRegistry(
     root: 'beam.analytics.providers',
@@ -42,6 +48,14 @@ use Splicewire\Beam\Analytics\Registries\DeclaredName;
 )]
 class AnalyticsProviderRegistry extends ConfigRegistry
 {
+    /**
+     * Who registered each key on this instance. It holds no entries and no read consults it: config alone cannot tell a
+     * second registration from a replay of a cached one, and this is the one fact needed to.
+     *
+     * @var array<string, string|null>
+     */
+    private array $registered = [];
+
     protected function configKey(): string
     {
         return 'beam.analytics.providers';
@@ -69,16 +83,21 @@ class AnalyticsProviderRegistry extends ConfigRegistry
             throw new InvalidArgumentException("The analytics provider `{$slot}` must have a string `id`, or none.");
         }
 
+        $by ??= Registrant::current();
+        $rooted = $this->declaration()->root.Key::SEPARATOR.$slot;
+
+        if (array_key_exists($slot, $this->registered)) {
+            throw DuplicateRegistryKey::for($rooted, $by, $this->registered[$slot]);
+        }
+
         $existing = $this->entries()[$slot] ?? null;
 
-        if ($existing === null) {
-            return parent::register($slot, $entry, $by, $ability);
+        if ($existing !== null && (! is_array($existing) || ($existing['adapter'] ?? null) !== $adapter)) {
+            throw DuplicateRegistryKey::for($rooted, $by, Registrant::fromConfig($this->configKey()));
         }
 
-        if (! is_array($existing) || ($existing['adapter'] ?? null) !== $adapter) {
-            throw new InvalidArgumentException("The analytics provider `{$slot}` is already declared with another adapter.");
-        }
+        $this->registered[$slot] = $by;
 
-        return $this;
+        return $existing === null ? parent::register($slot, $entry, $by, $ability) : $this;
     }
 }

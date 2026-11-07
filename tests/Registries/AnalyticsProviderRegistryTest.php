@@ -4,7 +4,9 @@ namespace Splicewire\Beam\Analytics\Tests\Registries;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
+use Rushing\Popcorn\Registries\Exceptions\DuplicateRegistryKey;
 use Rushing\Popcorn\Registries\IsRegistry;
+use Rushing\Popcorn\Registries\Registrant;
 use Rushing\Popcorn\Registries\Registry;
 use Splicewire\Beam\Analytics\AnalyticsManager;
 use Splicewire\Beam\Analytics\BeamAnalyticsServiceProvider;
@@ -71,25 +73,98 @@ class AnalyticsProviderRegistryTest extends TestCase
     }
 
     #[Test]
-    public function a_key_naming_another_adapter_is_refused(): void
+    public function a_key_config_holds_with_another_adapter_is_refused_naming_config(): void
     {
         $this->configure('production', ['gtm' => $this->gtm('GTM-1')]);
 
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('gtm');
-
-        $this->registry()->register('gtm', ['adapter' => AcmeAdapter::class]);
+        try {
+            $this->registry()->register('gtm', ['adapter' => AcmeAdapter::class], 'acme/one');
+            $this->fail('accepted a key config holds with another adapter');
+        } catch (DuplicateRegistryKey $e) {
+            $this->assertSame('beam.analytics.providers.gtm', $e->key);
+            $this->assertSame('acme/one', $e->incoming);
+            $this->assertSame('config:beam.analytics.providers', $e->existing);
+        }
     }
 
     /** A cached config holds the contribution, and the id it held wins over the one registered again on this boot. */
     #[Test]
-    public function a_key_naming_the_same_adapter_keeps_what_config_holds(): void
+    public function a_first_registration_config_already_holds_keeps_config(): void
     {
         $this->configure('production', ['acme' => ['adapter' => AcmeAdapter::class, 'id' => 'FROM-CONFIG']]);
 
         $this->registry()->register('acme', ['adapter' => AcmeAdapter::class, 'id' => null]);
 
         $this->assertSame('FROM-CONFIG', config('beam.analytics.providers.acme.id'));
+    }
+
+    #[Test]
+    public function a_second_registrant_of_a_config_held_key_is_refused_naming_the_first(): void
+    {
+        $this->configure('production', ['acme' => ['adapter' => AcmeAdapter::class, 'id' => 'FROM-CONFIG']]);
+
+        $this->registry()->register('acme', ['adapter' => AcmeAdapter::class], 'acme/one');
+
+        $this->assertRefused('acme', ['adapter' => AcmeAdapter::class], 'acme/two', 'acme/one');
+        $this->assertSame('FROM-CONFIG', config('beam.analytics.providers.acme.id'));
+    }
+
+    #[Test]
+    public function a_second_registration_is_refused_whatever_it_carries(): void
+    {
+        $this->configure('production', []);
+
+        $first = ['adapter' => AcmeAdapter::class, 'id' => 'A'];
+        $this->registry()->register('acme', $first, 'acme/one');
+
+        foreach ([$first, ['adapter' => AcmeAdapter::class, 'id' => 'B'], ['adapter' => GtmProvider::class, 'id' => 'A']] as $second) {
+            $this->assertRefused('acme', $second, 'acme/two', 'acme/one');
+        }
+
+        $this->assertSame($first, config('beam.analytics.providers.acme'));
+    }
+
+    #[Test]
+    public function a_repeat_by_the_same_registrant_is_refused(): void
+    {
+        $this->configure('production', []);
+
+        $this->registry()->register('acme', ['adapter' => AcmeAdapter::class], 'acme/one');
+
+        $this->assertRefused('acme', ['adapter' => AcmeAdapter::class], 'acme/one', 'acme/one');
+    }
+
+    #[Test]
+    public function a_scoped_registrant_is_the_one_a_refusal_names(): void
+    {
+        $this->configure('production', []);
+
+        Registrant::scoped('acme/scoped', fn () => $this->registry()->register('acme', ['adapter' => AcmeAdapter::class]));
+
+        $this->assertRefused('acme', ['adapter' => AcmeAdapter::class], 'acme/two', 'acme/scoped');
+    }
+
+    #[Test]
+    public function a_rooted_key_reaches_the_same_slot(): void
+    {
+        $this->configure('production', []);
+
+        $this->registry()->register('beam.analytics.providers.acme', ['adapter' => AcmeAdapter::class], 'acme/one');
+
+        $this->assertSame(AcmeAdapter::class, config('beam.analytics.providers.acme.adapter'));
+        $this->assertRefused('acme', ['adapter' => AcmeAdapter::class], 'acme/two', 'acme/one');
+    }
+
+    private function assertRefused(string $key, array $entry, string $incoming, string $existing): void
+    {
+        try {
+            $this->registry()->register($key, $entry, $incoming);
+            $this->fail("accepted a second registration of [{$key}]");
+        } catch (DuplicateRegistryKey $e) {
+            $this->assertSame("beam.analytics.providers.{$key}", $e->key);
+            $this->assertSame($incoming, $e->incoming);
+            $this->assertSame($existing, $e->existing);
+        }
     }
 
     #[Test]

@@ -55,7 +55,9 @@ first resolved once every provider has booted.
 
 - **A configured entry never refuses a boot.** An unknown adapter or an empty id renders nothing, and
   `splicewire:beam:analytics:doctor` reports it.
-- **A registration refuses at boot** when its adapter is not an `AnalyticsProvider` or its `id` is not a string, and when
-  its key is already declared with a different adapter.
-- **A key already declared with the same adapter keeps what is stored.** A host can therefore set a contributed
-  provider's id in its own config, and a cached config keeps working when the contribution registers again.
+- **A registration refuses at boot** when its adapter is not an `AnalyticsProvider` or its `id` is not a string.
+- **A second registration of a key refuses at boot,** naming both registrants, even when the two entries are identical.
+- **A first registration refuses at boot** when config already holds its key with a different adapter.
+- **A first registration whose key config already holds with the same adapter keeps config,** and counts as the key's
+  registration, so a second one still refuses. A host can therefore set a contributed provider's id in its own config,
+  and a cached config keeps working when the contribution registers again on the next boot.
