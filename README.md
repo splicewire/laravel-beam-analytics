@@ -1,9 +1,12 @@
 # laravel-beam-analytics
 
-Provider-agnostic analytics tags and a declared Event Vocabulary for Laravel applications.
-Beam's renderer requires this package as part of its base recipe; measurement stays off until
-a provider has an id and the environment is allowed. The package can also be installed without
-Beam. It never reads a service-account key or provisions analytics accounts.
+Provider-agnostic analytics tags, a declared Event Vocabulary and the registries an Analytics
+section is filled from, for beam hosts. Beam's renderer requires this package as part of its base
+recipe; measurement stays off until a provider has an id and the environment is allowed. It is a
+beam-tier package ([ADR-0242](docs/adr/0242-analytics-is-a-beam-tier-package-and-its-base-still-never-reads-a-service-account-key.md)):
+it requires `splicewire/laravel-beam`, `schemastud/laravel-frame` and `rushing/laravel-popcorn`, and
+never beam-ux, tower or the satellite tier. It never reads a service-account key or provisions
+analytics accounts.
 
 ## Install and wire
 
@@ -14,8 +17,9 @@ For a host without the renderer:
 composer require splicewire/laravel-beam-analytics:dev-main
 ```
 
-Under the fleet's Git-resolved package contract, the **root application's** `composer.json`
-needs a source entry for this package and every first-party transitive dependency. Composer
+That brings beam and frame with it. Under the fleet's Git-resolved package contract, the **root
+application's** `composer.json` needs a source entry for this package and every first-party
+transitive dependency. Composer
 ignores a dependency's own `repositories`. Add this entry to the root's existing list:
 
 ```json

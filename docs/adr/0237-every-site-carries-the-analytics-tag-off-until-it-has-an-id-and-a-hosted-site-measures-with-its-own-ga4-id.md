@@ -1,6 +1,6 @@
 # ADR-0237 — Every site carries the Analytics Tag, off until it has an id, and a Hosted site measures with its own GA4 id
 
-Status: **accepted**. Decided in editor-parity ticket 17, 2026-10-16, under the owner's standing instruction of that day
+Status: **accepted**, amended by [ADR-0242](0242-analytics-is-a-beam-tier-package-and-its-base-still-never-reads-a-service-account-key.md) on what this package requires. Decided in editor-parity ticket 17, 2026-10-16, under the owner's standing instruction of that day
 to accept every recommended answer. There was no live exchange; the ticket records each question and its options.
 Date: 2026-10-16
 Builds on: nothing in this repo; this is its first ADR.
@@ -90,7 +90,7 @@ Measured 2026-10-16 at this package's `e6a636e`, unless a line says otherwise:
 - **The doctor's pinned behaviour changes.** `a_keyless_provider_fails` becomes a keyless provider reading as off, a
   warning in an allowed environment, and an unplaced slot is reported with or without an id.
 - **`laravel-beam-ux` reads the Event Vocabulary from here** and serves it in the Manifest Profile (ADR-0234 decision
-  14). This package still requires nothing of beam's.
+  14). This package now requires beam, frame and popcorn, and never beam-ux ([ADR-0242](0242-analytics-is-a-beam-tier-package-and-its-base-still-never-reads-a-service-account-key.md)).
 - **Visitors in the listed regions set no analytics cookie until a consent notice exists.** Their visits count only as
   far as Consent Mode's denied state allows.
 - **The tenant Site section gains Settings,** beside Entries, Theme, Releases, Redirects and Collections.

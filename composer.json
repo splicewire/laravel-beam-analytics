@@ -1,17 +1,19 @@
 {
     "name": "splicewire/laravel-beam-analytics",
-    "description": "Provider-agnostic, opt-in, fail-closed frontend analytics for beam satellites. Two Blade directives (@beamAnalyticsHead / @beamAnalyticsBody) render the analytics markup for every configured-and-keyed provider at once and nothing when a provider is keyless, the env is disallowed, or a provider name is unknown. GTM ships as the first adapter; a `splicewire:beam:analytics:doctor` command verifies directive placement and env/config coherence. Never reads a service-account key.",
+    "description": "Analytics for beam hosts: the frontend tag, a declared Event Vocabulary, and the registries an Analytics section is filled from. Two Blade directives (@beamAnalyticsHead / @beamAnalyticsBody) render the markup for every configured-and-keyed provider at once and nothing when a provider is keyless, the env is disallowed, or a provider name is unknown. GTM and GA4 ship as adapters; a `splicewire:beam:analytics:doctor` command verifies directive placement and env/config coherence. A beam-tier package: it requires beam, frame and popcorn, and never beam-ux. Never reads a service-account key.",
     "type": "library",
     "license": "MIT",
     "require": {
-        "php": "^8.2",
+        "php": "^8.3",
         "illuminate/console": "^11.0|^12.0|^13.0",
         "illuminate/contracts": "^11.0|^12.0|^13.0",
         "illuminate/support": "^11.0|^12.0|^13.0",
         "illuminate/view": "^11.0|^12.0|^13.0",
         "spatie/laravel-package-tools": "^1.16",
         "rushing/laravel-doctor": "*",
-        "rushing/laravel-popcorn": "*"
+        "rushing/laravel-popcorn": "*",
+        "schemastud/laravel-frame": "*",
+        "splicewire/laravel-beam": "*"
     },
     "require-dev": {
         "laravel/pint": "^1.0",
@@ -35,6 +37,20 @@
                 "Splicewire\\Beam\\Analytics\\BeamAnalyticsServiceProvider"
             ]
         },
+        "package-topology": {
+            "because": "analytics is a beam-tier package: its Analytics section is built from particles and Data classes, so it depends DOWN on beam core, frame and popcorn (ADR-0242). beam-ux requires this package to carry the tag on every site, so an edge back to beam-ux would be a cycle, and the composed tower host and the satellite tier sit above it. Packages fill its registries by naming them as strings, which needs no edge in either direction.",
+            "mustRequire": [
+                "splicewire/laravel-beam",
+                "schemastud/laravel-frame",
+                "rushing/laravel-popcorn"
+            ],
+            "mustNotRequire": [
+                "splicewire/laravel-beam-ux",
+                "splicewire/tower",
+                "splicewire/laravel-satellite",
+                "splicewire/laravel-tower-*"
+            ]
+        },
         "merge-plugin": {
             "include": [
                 "composer.local.json"
@@ -49,25 +65,16 @@
     },
     "repositories": [
         {
-            "type": "path",
-            "url": "../../rushing/laravel-doctor",
-            "options": {
-                "symlink": true
-            }
+            "type": "git",
+            "url": "https://github.com/stephenr85/codegen.git"
         },
         {
-            "type": "path",
-            "url": "../../rushing/laravel-popcorn",
-            "options": {
-                "symlink": true
-            }
+            "type": "git",
+            "url": "https://github.com/stephenr85/laravel-data-filters.git"
         },
         {
-            "type": "path",
-            "url": "../../rushing/php-popcorn",
-            "options": {
-                "symlink": true
-            }
+            "type": "git",
+            "url": "https://github.com/stephenr85/laravel-data-nav.git"
         },
         {
             "type": "git",
@@ -75,11 +82,47 @@
         },
         {
             "type": "git",
+            "url": "https://github.com/stephenr85/laravel-permission-cascade.git"
+        },
+        {
+            "type": "git",
+            "url": "https://github.com/stephenr85/laravel-pipeline-registry.git"
+        },
+        {
+            "type": "git",
             "url": "https://github.com/stephenr85/laravel-popcorn.git"
         },
         {
             "type": "git",
+            "url": "https://github.com/stephenr85/laravel-schema-convergence.git"
+        },
+        {
+            "type": "git",
+            "url": "https://github.com/stephenr85/laravel-versioning.git"
+        },
+        {
+            "type": "git",
             "url": "https://github.com/stephenr85/php-popcorn.git"
+        },
+        {
+            "type": "git",
+            "url": "https://github.com/schemastud/laravel-data-schemas.git"
+        },
+        {
+            "type": "git",
+            "url": "https://github.com/schemastud/laravel-frame.git"
+        },
+        {
+            "type": "git",
+            "url": "https://github.com/schemastud/laravel-json-ns.git"
+        },
+        {
+            "type": "git",
+            "url": "https://github.com/schemastud/php-json-ns.git"
+        },
+        {
+            "type": "git",
+            "url": "https://github.com/splicewire/laravel-beam.git"
         }
     ],
     "config": {
