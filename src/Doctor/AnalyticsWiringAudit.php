@@ -66,7 +66,7 @@ class AnalyticsWiringAudit implements DoctorAudit
         }
 
         // --- Check 2: directive placement (ADR-0237 d2: checked with or without an id) ---------------
-        [$placed, $checked] = $this->directivesPlaced();
+        [$placed, $checked] = $this->placement();
 
         if ($checked === []) {
             $findings[] = Finding::warn('Directive placement unverified', 'no root template found — set `analytics.root_templates`.');
@@ -104,11 +104,12 @@ class AnalyticsWiringAudit implements DoctorAudit
     }
 
     /**
-     * Which configured root templates that exist carry BOTH directives, and which were checked.
+     * Which configured root templates that exist carry BOTH directives, and which were checked. Public because the
+     * Measurement area shows the same answer this check gives.
      *
      * @return array{0: list<string>, 1: list<string>}
      */
-    private function directivesPlaced(): array
+    public function placement(): array
     {
         $placed = [];
         $checked = [];

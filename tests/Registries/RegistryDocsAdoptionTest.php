@@ -17,6 +17,10 @@ class RegistryDocsAdoptionTest extends TestCase
         $report = RegistryDocsCheck::forPackage(dirname(__DIR__, 2))->run();
 
         $this->assertSame([], $report->failures(), $report->summary());
-        $this->assertCount(2, $report->coverage, 'the providers and events roots: '.implode(', ', array_keys($report->coverage)));
+        $this->assertEqualsCanonicalizing(
+            ['beam.analytics.areas', 'beam.analytics.events', 'beam.analytics.providers'],
+            array_keys($report->coverage),
+            'the areas, events and providers roots',
+        );
     }
 }

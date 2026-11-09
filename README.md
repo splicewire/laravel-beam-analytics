@@ -159,6 +159,21 @@ therefore lack this API even when current source declares it. Vocabulary entries
 not establish automatic reporting on every packaged surface; search and checkout reporting
 remain separate unfinished integration work.
 
+## The Analytics section
+
+On a beam host this package seats an **Analytics** section in the `operator` realm. The seat is flagged `overview`, so it
+lands on an overview with one card per **Analytics Area**, and each card links to that area's page. Anyone holding
+`analytics.view` opens it. The package declares that entitlement key, and beam-accounts' default resolver composes it from
+an `operator` grant.
+
+Each area is a class in the [`beam.analytics.areas`](docs/registries/beam.analytics.areas.mdx) registry, drawn as the
+resource `analytics-{key}`. Its page and its card read one figures path, so they cannot disagree. Its `policy:` asks for
+`analytics.view` first, so an area can narrow the gate and never widen it.
+
+The package ships **Measurement**: which providers are on, the environments allowed to render a tag, the consent regions,
+and whether the tag's slots are placed. It shows configuration and calls no provider. Packages add areas from their own
+providers, naming the registry as a string, with no composer edge to this package.
+
 ## Doctor
 
 ```bash

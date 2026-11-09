@@ -1,0 +1,82 @@
+---
+title: Analytics Areas
+segment: beam.analytics.areas
+nav_order: 100
+excerpt: The Analytics Areas the Analytics section draws, each as its own page and as a card on the section overview.
+---
+
+# Analytics Areas
+
+`beam.analytics.areas` holds the **Analytics Areas**: the parts of the Analytics section, each one an `AnalyticsArea` class
+keyed by its area key. An area measures a handful of figures. It is drawn as the resource `analytics-{key}`, which is the
+area's page, and as that resource's card on the section's overview. The page and the card read one figures path, so they
+cannot disagree.
+
+The section is seated in the `operator` realm with an overview, and anyone holding `analytics.view` opens it.
+
+{/* registry-facts:start — generated from the #[IsRegistry] declaration; regenerate it, do not edit between these markers. */}
+
+- **Root:** `beam.analytics.areas`
+- **Entries:** `class-string<Splicewire\Beam\Analytics\Areas\AnalyticsArea>`
+- **Duplicate keys:** Reject — registering a taken key throws
+- **Population:** Optional — an empty registry is normal
+- **Order:** `100` (display order, ascending)
+- **Declared by:** `Splicewire\Beam\Analytics\Areas\AnalyticsAreaRegistry`
+
+{/* registry-facts:end */}
+
+<RegistryRegistrants root="beam.analytics.areas" />
+
+## What ships
+
+**Measurement**, `analytics-measurement`: which tag providers are on, the environments allowed to render a tag, the regions
+where Consent Mode denies analytics storage by default, and whether the tag's two slots are placed in a root template. It
+shows configuration. It measures no traffic and calls no provider.
+
+## Contributing an area
+
+Write a class that implements `AnalyticsArea` and declare what it is drawn under:
+
+```php
+use Splicewire\Beam\Analytics\Areas\AnalyticsArea;
+use Splicewire\Beam\Analytics\Areas\AnalyticsReading;
+use Splicewire\Beam\Analytics\Areas\Attributes\Area;
+use Splicewire\Beam\Analytics\Data\AnalyticsFigureData;
+
+#[Area(key: 'audience', label: 'Audience', icon: 'Users', order: 40)]
+final class AudienceArea implements AnalyticsArea
+{
+    public function measure(AnalyticsReading $reading): array
+    {
+        return [new AnalyticsFigureData(id: 'members', label: 'Members', value: 12)];
+    }
+}
+```
+
+Then register it from your own service provider. Name the registry as a string, so your package needs no composer edge to
+this one:
+
+```php
+$this->app->afterResolving(
+    'Splicewire\Beam\Analytics\Areas\AnalyticsAreaRegistry',
+    fn ($areas) => $areas->add(AudienceArea::class, 'acme/accounts'),
+);
+```
+
+The class is resolved from the container, so it can take what it reads in its constructor. An area with nothing to
+measure returns no figures, and its card is left off the overview: it never shows an invented zero.
+
+## Who can read an area
+
+An area's resource asks for `analytics.view` first. An area can narrow that with `ability:` in its `#[Area]`, and a reader
+then needs both. It cannot widen it: an area whose own ability admits everyone still refuses a reader without
+`analytics.view`, with a 403 on its page and its card.
+
+## What refuses
+
+All of these refuse where the area is registered, which for a package contribution is boot:
+
+- a key that is already taken, naming both registrants;
+- a class that is not an `AnalyticsArea`, or that carries no `#[Area]`;
+- a key that is not kebab-case, or that differs from the one its `#[Area]` declares;
+- an empty label or icon.
