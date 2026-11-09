@@ -2,8 +2,9 @@
 
 namespace Splicewire\Beam\Analytics\Scope;
 
-/** Which party a reading reports. Install is the one kind until ticket 05 adds a tenant's. */
+/** Which party a reading reports: the install, or one tenant inside its own boundary. */
 enum AnalyticsScopeKind: string
 {
     case Install = 'install';
+    case Tenant = 'tenant';
 }

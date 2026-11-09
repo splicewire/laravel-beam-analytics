@@ -12,7 +12,9 @@ keyed by its area key. An area measures a handful of figures. It is drawn as the
 area's page, and as that resource's card on the section's overview. The page and the card read one figures path, so they
 cannot disagree.
 
-The section is seated in the `operator` realm with an overview, and anyone holding `analytics.view` opens it.
+The section is seated in the `operator` and `tenant` realms with an overview, and anyone holding `analytics.view` opens it.
+Every area serves both realms. Its reading is in Tenant scope inside a tenant's boundary and in Install scope otherwise, so a
+tenant's page and card show that tenant's own figures.
 
 {/* registry-facts:start — generated from the #[IsRegistry] declaration; regenerate it, do not edit between these markers. */}
 
@@ -31,7 +33,8 @@ The section is seated in the `operator` realm with an overview, and anyone holdi
 
 **Measurement**, `analytics-measurement`: which tag providers are on, the environments allowed to render a tag, the regions
 where Consent Mode denies analytics storage by default, and whether the tag's two slots are placed in a root template. It
-shows configuration. It measures no traffic and calls no provider.
+shows configuration. It measures no traffic and calls no provider. Each provider is shown with its id: the install's in
+Install scope, and in Tenant scope only the tenant's own, read through the `MeasurementSettings` port, never the install's.
 
 ## Contributing an area
 

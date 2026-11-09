@@ -9,13 +9,17 @@ use Splicewire\Beam\Analytics\Areas\AnalyticsAreaRegistry;
 use Splicewire\Beam\Analytics\Areas\AnalyticsAreaResources;
 use Splicewire\Beam\Analytics\Areas\AnalyticsReading;
 use Splicewire\Beam\Analytics\Console\BeamAnalyticsDoctorCommand;
+use Splicewire\Beam\Analytics\Contracts\MeasurementSettings;
 use Splicewire\Beam\Analytics\Doctor\AnalyticsWiringAudit;
 use Splicewire\Beam\Analytics\Events\AnalyticsEventRegistry;
 use Splicewire\Beam\Analytics\Events\EventVocabulary;
 use Splicewire\Beam\Analytics\Providers\AnalyticsProviderRegistry;
 use Splicewire\Beam\Analytics\Scope\AnalyticsPeriod;
 use Splicewire\Beam\Analytics\Scope\AnalyticsScope;
+use Splicewire\Beam\Analytics\Settings\ConfigMeasurementSettings;
 use Splicewire\Beam\Nav\NavSectionRegistry;
+use Splicewire\Beam\Realm\Contracts\TenancyContext;
+use Splicewire\Beam\Realm\RealmRegistry;
 
 class BeamAnalyticsServiceProvider extends PackageServiceProvider
 {
@@ -34,8 +38,13 @@ class BeamAnalyticsServiceProvider extends PackageServiceProvider
         $this->app->singleton(AnalyticsEventRegistry::class);
         $this->app->singleton(AnalyticsAreaRegistry::class);
 
-        // Whose figures and over what window, decided once per request. Install scope until ticket 05 adds a tenant's.
-        $this->app->scoped(AnalyticsScope::class, fn (): AnalyticsScope => AnalyticsScope::install());
+        // Whose figures and over what window, decided once per request: Tenant scope inside a tenant's boundary, as beam's
+        // TenancyContext reports it, and Install scope otherwise. The measurement ids a scope's site is set up with are read
+        // through MeasurementSettings, which a tenancy layer rebinds to a tenant's own settings.
+        $this->app->bind(MeasurementSettings::class, ConfigMeasurementSettings::class);
+        $this->app->scoped(AnalyticsScope::class, fn ($app): AnalyticsScope => $app->bound(TenancyContext::class)
+            ? AnalyticsScope::fromTenancy($app->make(TenancyContext::class))
+            : AnalyticsScope::install());
         $this->app->scoped(AnalyticsReading::class, fn ($app): AnalyticsReading => new AnalyticsReading($app->make(AnalyticsScope::class), AnalyticsPeriod::overview()));
 
         // `analytics.view` is a declared entitlement key, so `entitlement:analytics.view` is an ability beam defines. It is
@@ -73,7 +82,7 @@ class BeamAnalyticsServiceProvider extends PackageServiceProvider
         if ($this->app->bound(NavSectionRegistry::class)) {
             $seats = $this->app->make(NavSectionRegistry::class);
             foreach (AnalyticsSection::REALMS as $realm) {
-                $seats->register(AnalyticsSection::seat($realm), by: AnalyticsSection::REGISTRANT);
+                $seats->register(AnalyticsSection::seat($realm, $this->routeBase($realm)), by: AnalyticsSection::REGISTRANT);
             }
         }
         $this->app->make(AnalyticsAreaResources::class)->register();
@@ -106,5 +115,13 @@ class BeamAnalyticsServiceProvider extends PackageServiceProvider
                 gate: false,
             );
         }
+    }
+
+    /** `$realm`'s route base from beam's realm registry (`/operator`; `/` for the tenant realm), or `/{realm}` if unknown. */
+    private function routeBase(string $realm): string
+    {
+        $realms = $this->app->bound(RealmRegistry::class) ? $this->app->make(RealmRegistry::class) : null;
+
+        return $realms?->get($realm)?->routeBase ?? '/'.$realm;
     }
 }

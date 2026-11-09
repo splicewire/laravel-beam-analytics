@@ -21,8 +21,8 @@ final class AnalyticsSection
     /** The one entitlement that opens the section. A declared key, so `entitlement:analytics.view` is an ability. */
     public const ENTITLEMENT = 'analytics.view';
 
-    /** The realms the section is seated in. Ticket 05 adds `tenant`. */
-    public const REALMS = ['operator'];
+    /** The realms the section is seated in: the install's operators, and each tenant inside its own workspace. */
+    public const REALMS = ['operator', 'tenant'];
 
     public const LABEL = 'Analytics';
 
@@ -37,15 +37,18 @@ final class AnalyticsSection
     /** The registrant this package writes under, in every registry it fills. */
     public const REGISTRANT = 'splicewire/laravel-beam-analytics';
 
-    /** The seat in `$realm`. Its href is a section path, never a leaf's: the overview flag lands it on the overview. */
-    public static function seat(string $realm): NavSection
+    /**
+     * The seat in `$realm`, under that realm's route base: `/operator/analytics`, or `/analytics` in the tenant realm, which
+     * is mounted at `/`. Its href is a section path, never a leaf's: the overview flag lands it on the overview.
+     */
+    public static function seat(string $realm, string $routeBase): NavSection
     {
         return new NavSection(
             key: self::KEY,
             realm: $realm,
             label: self::LABEL,
             icon: self::ICON,
-            href: '/'.$realm.'/'.self::KEY,
+            href: rtrim($routeBase, '/').'/'.self::KEY,
             order: self::ORDER,
             entitlement: [self::ENTITLEMENT],
             permission: null,

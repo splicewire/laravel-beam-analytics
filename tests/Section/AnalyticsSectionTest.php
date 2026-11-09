@@ -75,7 +75,7 @@ class AnalyticsSectionTest extends SectionTestCase
 
         $rows = $this->rows($page->json('data'));
         $this->assertSame([
-            'providers' => ['label' => 'Providers on', 'value' => 'gtm'],
+            'providers' => ['label' => 'Providers on', 'value' => 'gtm (GTM-TEST1)'],
             'environments' => ['label' => 'Allowed environments', 'value' => 'production, staging'],
             'consent' => ['label' => 'Consent regions', 'value' => 'EEA, GB, CH'],
             'placement' => ['label' => 'Slot placement', 'value' => 'Placed in 1 root template'],
@@ -182,7 +182,7 @@ class AnalyticsSectionTest extends SectionTestCase
 
         $particles = app(ParticleResourceRegistry::class);
         $this->assertSame(AnalyticsSection::KEY, $particles->resolve('analytics-measurement')->section);
-        $this->assertSame(['operator'], $particles->realmsFor('analytics-measurement'));
+        $this->assertEqualsCanonicalizing(['operator', 'tenant'], $particles->realmsFor('analytics-measurement'));
     }
 
     #[Test]

@@ -3,24 +3,27 @@
 namespace Splicewire\Beam\Analytics\Areas;
 
 use Illuminate\Contracts\Config\Repository;
-use Splicewire\Beam\Analytics\AnalyticsManager;
 use Splicewire\Beam\Analytics\Areas\Attributes\Area;
+use Splicewire\Beam\Analytics\Contracts\AnalyticsProvider;
+use Splicewire\Beam\Analytics\Contracts\MeasurementSettings;
 use Splicewire\Beam\Analytics\Data\AnalyticsFigureData;
 use Splicewire\Beam\Analytics\Doctor\AnalyticsWiringAudit;
+use Splicewire\Beam\Analytics\Scope\AnalyticsScope;
 
 /**
  * Measurement: how this site's tag is set up. Which providers are on (keyed, with an adapter that resolves), the
  * environments allowed to render a tag, the regions where Consent Mode denies analytics storage by default, and whether
  * the tag's two slots are placed in a root template. It shows configuration; it measures no traffic and calls no provider.
  *
- * Install scope reads the install's config, through the manager and the wiring audit that already answer these
- * questions. A tenant's own settings are ticket 05's.
+ * The ids are the scope's own settings, read through {@see MeasurementSettings}: the install's config, or a tenant's Site
+ * Settings where a tenancy layer rebinds the port. The environments, the consent regions and the slot placement are the
+ * install's, because a hosted site renders its tag under its install's policy and root template.
  */
 #[Area(key: 'measurement', label: 'Measurement', icon: 'Gauge', order: 10)]
 final class MeasurementArea implements AnalyticsArea
 {
     public function __construct(
-        private readonly AnalyticsManager $manager,
+        private readonly MeasurementSettings $settings,
         private readonly AnalyticsWiringAudit $audit,
         private readonly Repository $config,
     ) {}
@@ -28,17 +31,35 @@ final class MeasurementArea implements AnalyticsArea
     public function measure(AnalyticsReading $reading): array
     {
         return [
-            new AnalyticsFigureData(id: 'providers', label: 'Providers on', value: $this->listed($this->activeProviders())),
+            new AnalyticsFigureData(id: 'providers', label: 'Providers on', value: $this->listed($this->activeProviders($reading->scope))),
             new AnalyticsFigureData(id: 'environments', label: 'Allowed environments', value: $this->listed($this->strings('beam.analytics.enabled_envs'))),
             new AnalyticsFigureData(id: 'consent', label: 'Consent regions', value: $this->consent()),
             new AnalyticsFigureData(id: 'placement', label: 'Slot placement', value: $this->placement()),
         ];
     }
 
-    /** @return list<string> the providers that will render where the env allows: keyed, and their adapter resolves */
-    private function activeProviders(): array
+    /**
+     * The providers on for this scope's site, each with its id: keyed in the scope's own settings, and its adapter resolves.
+     * The ids come from {@see MeasurementSettings}, never from the tag's id resolver, so a tenant sees its own id and never
+     * the install's.
+     *
+     * @return list<string>
+     */
+    private function activeProviders(AnalyticsScope $scope): array
     {
-        return array_keys(array_filter($this->manager->providerStatuses(), fn (array $status): bool => $status['status'] === 'active'));
+        $ids = $this->settings->providerIds($scope);
+        $on = [];
+
+        foreach ((array) $this->config->get('beam.analytics.providers', []) as $name => $provider) {
+            $adapter = $provider['adapter'] ?? null;
+            $id = $ids[(string) $name] ?? '';
+
+            if ($id !== '' && is_string($adapter) && is_subclass_of($adapter, AnalyticsProvider::class)) {
+                $on[] = "{$name} ({$id})";
+            }
+        }
+
+        return $on;
     }
 
     /** The regions where analytics storage is denied until consent, or "Off" when no consent block renders. */

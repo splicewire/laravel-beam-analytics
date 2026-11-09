@@ -161,10 +161,15 @@ remain separate unfinished integration work.
 
 ## The Analytics section
 
-On a beam host this package seats an **Analytics** section in the `operator` realm. The seat is flagged `overview`, so it
-lands on an overview with one card per **Analytics Area**, and each card links to that area's page. Anyone holding
-`analytics.view` opens it. The package declares that entitlement key, and beam-accounts' default resolver composes it from
-an `operator` grant.
+On a beam host this package seats an **Analytics** section in the `operator` and `tenant` realms, each under its realm's
+own route base. The seat is flagged `overview`, so it lands on an overview with one card per **Analytics Area**, and each
+card links to that area's page. Anyone holding `analytics.view` opens it. The package declares that entitlement key, and
+beam-accounts' default resolver composes it from an `operator` or a `tenant` grant.
+
+One set of area resources serves both realms, and the scope comes from the request: Tenant scope inside a tenant's
+boundary, as beam's `TenancyContext` reports it, and Install scope otherwise. The package holds no topology code. What a
+scope's site is set up with is read through the `MeasurementSettings` port, which answers the install from config and gives
+a tenant nothing of the install's; a tenancy layer rebinds it so a tenant reads its own settings.
 
 Each area is a class in the [`beam.analytics.areas`](docs/registries/beam.analytics.areas.mdx) registry, drawn as the
 resource `analytics-{key}`. Its page and its card read one figures path, so they cannot disagree. Its `policy:` asks for
