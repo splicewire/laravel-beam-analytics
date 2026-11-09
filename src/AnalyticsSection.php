@@ -26,7 +26,11 @@ final class AnalyticsSection
 
     public const LABEL = 'Analytics';
 
-    public const ICON = 'ChartLine';
+    /**
+     * A name the console's icon map draws (beam-inertia `src/frame/icons.tsx`). A name it does not carry draws as an empty
+     * circle, which is what `ChartLine` did on the realm dashboard's tile.
+     */
+    public const ICON = 'Activity';
 
     public const ORDER = 70;
 
