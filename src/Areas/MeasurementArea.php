@@ -4,9 +4,11 @@ namespace Splicewire\Beam\Analytics\Areas;
 
 use Illuminate\Contracts\Config\Repository;
 use Splicewire\Beam\Analytics\Areas\Attributes\Area;
+use Splicewire\Beam\Analytics\Contracts\AnalyticsDestinations;
 use Splicewire\Beam\Analytics\Contracts\AnalyticsProvider;
 use Splicewire\Beam\Analytics\Contracts\MeasurementSettings;
 use Splicewire\Beam\Analytics\Data\AnalyticsFigureData;
+use Splicewire\Beam\Analytics\Destinations\DestinationLinks;
 use Splicewire\Beam\Analytics\Doctor\AnalyticsWiringAudit;
 use Splicewire\Beam\Analytics\Scope\AnalyticsScope;
 
@@ -26,12 +28,14 @@ final class MeasurementArea implements AnalyticsArea
         private readonly MeasurementSettings $settings,
         private readonly AnalyticsWiringAudit $audit,
         private readonly Repository $config,
+        private readonly DestinationLinks $links,
     ) {}
 
+    /** The providers figure links to the scope's Site settings, where its ids are set, when the host names that page. */
     public function measure(AnalyticsReading $reading): array
     {
         return [
-            new AnalyticsFigureData(id: 'providers', label: 'Providers on', value: $this->listed($this->activeProviders($reading->scope))),
+            new AnalyticsFigureData(id: 'providers', label: 'Providers on', value: $this->listed($this->activeProviders($reading->scope)), href: $this->links->href(AnalyticsDestinations::SITE_SETTINGS, $reading->scope)),
             new AnalyticsFigureData(id: 'environments', label: 'Allowed environments', value: $this->listed($this->strings('beam.analytics.enabled_envs'))),
             new AnalyticsFigureData(id: 'consent', label: 'Consent regions', value: $this->consent()),
             new AnalyticsFigureData(id: 'placement', label: 'Slot placement', value: $this->placement()),

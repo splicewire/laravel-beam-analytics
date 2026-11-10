@@ -64,6 +64,13 @@ class BeamAnalyticsServiceProvider extends PackageServiceProvider
             Contracts\AnalyticsIdResolver::class,
             Resolvers\ConfigIdResolver::class,
         );
+
+        // Where an area's figure leads (the site editor, Site settings) is the host's to say, so the default names no
+        // destination and draws no link. Bound (not singleton) so a host rebinds it, per scope if it needs to.
+        $this->app->bind(
+            Contracts\AnalyticsDestinations::class,
+            Destinations\NoDestinations::class,
+        );
     }
 
     public function packageBooted(): void

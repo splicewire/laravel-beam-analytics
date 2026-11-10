@@ -181,6 +181,26 @@ providers, naming the registry as a string, with no composer edge to this packag
 `php artisan splicewire:beam:analytics:make-area` writes a conforming area, checks the class it wrote, and exits 1 on a
 finding.
 
+A figure links to a host page, such as Site settings or the site editor, only through the `AnalyticsDestinations` port.
+The host binds it to answer a named destination (`site-settings`, `site-editor`) for the current scope with a route name,
+its parameters and the ability that opens it. A link is drawn only where that route exists and the viewer passes that
+ability. The default binding answers nothing, so a host that binds nothing gets no links. A destination never changes who
+can read an area.
+
+```php
+use Splicewire\Beam\Analytics\Contracts\AnalyticsDestinations;
+use Splicewire\Beam\Analytics\Destinations\AnalyticsDestination;
+
+$this->app->bind(AnalyticsDestinations::class, fn () => new class implements AnalyticsDestinations {
+    public function destination(string $name, AnalyticsScope $scope): ?AnalyticsDestination
+    {
+        return $name === AnalyticsDestinations::SITE_SETTINGS
+            ? new AnalyticsDestination(routeName: 'site.settings', ability: 'site.edit')
+            : null;
+    }
+});
+```
+
 ## Doctor
 
 ```bash
