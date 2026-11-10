@@ -18,7 +18,7 @@ use UnexpectedValueException;
 
 /**
  * Every Analytics Area the section draws, keyed by area key, each entry an {@see AnalyticsArea} class. This package's
- * {@see MeasurementArea} and {@see EventsArea} are held from the start; a package contributes beside them from its own
+ * {@see MeasurementArea}, {@see TrafficArea} and {@see EventsArea} are held from the start; a package contributes beside them from its own
  * provider, naming this class only as a string, so it costs no composer edge:
  *
  * ```php
@@ -40,7 +40,7 @@ use UnexpectedValueException;
 class AnalyticsAreaRegistry implements Gated, Registry
 {
     /** The areas this package ships, in the order they are held. */
-    public const PACKAGE = [MeasurementArea::class, EventsArea::class];
+    public const PACKAGE = [MeasurementArea::class, TrafficArea::class, EventsArea::class];
 
     private ?BasicRegistry $store = null;
 

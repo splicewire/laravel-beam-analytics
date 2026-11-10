@@ -24,6 +24,12 @@ interface AnalyticsDestinations
     /** The site's settings, where its measurement ids are set: Measurement links its providers figure here. */
     public const SITE_SETTINGS = 'site-settings';
 
+    /**
+     * Where a site's traffic source is connected: Traffic's "Not connected" figure links here, its way forward. No host names
+     * this page yet (connecting a real source is ticket 14), so today the figure draws with no link.
+     */
+    public const TRAFFIC_SOURCES = 'traffic-sources';
+
     /** Where `$name` opens for `$scope`'s site, or null when the host has no such page for it. */
     public function destination(string $name, AnalyticsScope $scope): ?AnalyticsDestination;
 }

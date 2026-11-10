@@ -18,9 +18,9 @@ class RegistryDocsAdoptionTest extends TestCase
 
         $this->assertSame([], $report->failures(), $report->summary());
         $this->assertEqualsCanonicalizing(
-            ['beam.analytics.areas', 'beam.analytics.events', 'beam.analytics.providers'],
+            ['beam.analytics.areas', 'beam.analytics.events', 'beam.analytics.providers', 'beam.analytics.sources'],
             array_keys($report->coverage),
-            'the areas, events and providers roots',
+            'the areas, events, providers and sources roots',
         );
     }
 }

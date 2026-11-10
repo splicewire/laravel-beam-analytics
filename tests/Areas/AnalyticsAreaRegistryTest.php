@@ -8,6 +8,7 @@ use Rushing\Popcorn\Registries\Exceptions\DuplicateRegistryKey;
 use Splicewire\Beam\Analytics\Areas\AnalyticsAreaRegistry;
 use Splicewire\Beam\Analytics\Areas\EventsArea;
 use Splicewire\Beam\Analytics\Areas\MeasurementArea;
+use Splicewire\Beam\Analytics\Areas\TrafficArea;
 use Splicewire\Beam\Analytics\BeamAnalyticsServiceProvider;
 use Splicewire\Beam\Analytics\Tests\Support\Areas\BadKeyArea;
 use Splicewire\Beam\Analytics\Tests\Support\Areas\NarrowArea;
@@ -23,15 +24,17 @@ use Splicewire\Beam\Analytics\Tests\TestCase;
 class AnalyticsAreaRegistryTest extends TestCase
 {
     #[Test]
-    public function measurement_and_events_ship_as_the_packages_areas(): void
+    public function measurement_traffic_and_events_ship_as_the_packages_areas(): void
     {
         $areas = app(AnalyticsAreaRegistry::class);
 
         $this->assertSame(MeasurementArea::class, $areas->resolve('measurement'));
+        $this->assertSame(TrafficArea::class, $areas->resolve('traffic'));
+        $this->assertSame('splicewire/laravel-beam-analytics', $areas->registrantOf('traffic'));
         $this->assertSame(EventsArea::class, $areas->resolve('events'));
         $this->assertSame('splicewire/laravel-beam-analytics', $areas->registrantOf('measurement'));
         $this->assertSame('splicewire/laravel-beam-analytics', $areas->registrantOf('events'));
-        $this->assertSame(['analytics-measurement', 'analytics-events'], array_map(fn ($area) => $area->resourceKey(), $areas->definitions()));
+        $this->assertSame(['analytics-measurement', 'analytics-traffic', 'analytics-events'], array_map(fn ($area) => $area->resourceKey(), $areas->definitions()));
     }
 
     #[Test]

@@ -37,6 +37,13 @@ shows configuration. It measures no traffic and calls no provider. Each provider
 Install scope, and in Tenant scope only the tenant's own, read through the `MeasurementSettings` port, never the install's.
 Its providers figure links to the host's `site-settings` destination.
 
+**Traffic**, `analytics-traffic`: users, sessions and views over the period, with when they were measured, read from a
+source in [`beam.analytics.sources`](./beam.analytics.sources.mdx) through the cache, never from the source on a request.
+It reads "Not connected" when no source covers the scope (linking to the host's `traffic-sources` destination), "Not
+measured yet" before the first reading, and "Couldn't be measured" when the source failed with no earlier reading. Its
+trend, top pages and referrers are drawn by three panels beside it, `analytics-traffic-trend` (`trend-card`),
+`analytics-traffic-pages` and `analytics-traffic-referrers` (`stat-row`), under the Traffic area's own ability.
+
 **Events**, `analytics-events`: the Event Vocabulary, one row per event a site may report, with its parameters and whether
 a package or the host declared it, in the order `x-events` serves them. Every row says "Declared by …", because nothing
 records an event firing. Each row links to the host's `site-editor` destination.

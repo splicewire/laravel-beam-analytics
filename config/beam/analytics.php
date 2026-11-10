@@ -98,6 +98,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Traffic
+    |--------------------------------------------------------------------------
+    |
+    | Traffic reads a site's users, sessions and views from a Traffic Source in `beam.analytics.sources`
+    | (none ships here; with none, Traffic reads "Not connected"). A reader's request never asks the
+    | source: it is shown the last reading, and a reading older than `ttl` seconds is still shown, with
+    | its time, while a queued job refreshes it inside the scope's own tenant.
+    |
+    */
+    'traffic' => [
+        'ttl' => (int) env('BEAM_ANALYTICS_TRAFFIC_TTL', 3600),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Root templates (doctor)
     |--------------------------------------------------------------------------
     |

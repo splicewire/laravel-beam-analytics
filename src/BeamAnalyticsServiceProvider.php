@@ -38,6 +38,7 @@ class BeamAnalyticsServiceProvider extends PackageServiceProvider
         $this->app->singleton(AnalyticsProviderRegistry::class);
         $this->app->singleton(AnalyticsEventRegistry::class);
         $this->app->singleton(AnalyticsAreaRegistry::class);
+        $this->app->singleton(Traffic\TrafficSourceRegistry::class);
 
         // Whose figures and over what window, decided once per request: Tenant scope inside a tenant's boundary, as beam's
         // TenancyContext reports it, and Install scope otherwise. The measurement ids a scope's site is set up with are read
@@ -82,6 +83,7 @@ class BeamAnalyticsServiceProvider extends PackageServiceProvider
             $app->make(AnalyticsProviderRegistry::class);
             $app->make(EventVocabulary::class)->validate();
             $app->make(AnalyticsAreaRegistry::class)->definitions();
+            $app->make(Traffic\TrafficSourceRegistry::class)->keys();
         });
 
         // The Analytics section (ticket 04): a seat in each of its realms, flagged `overview`, and one resource per area.
@@ -94,7 +96,11 @@ class BeamAnalyticsServiceProvider extends PackageServiceProvider
             }
         }
         $this->app->make(AnalyticsAreaResources::class)->register();
-        $this->app->booted(fn ($app) => $app->make(AnalyticsAreaResources::class)->register());
+        $this->app->make(Traffic\TrafficPanelResources::class)->register();
+        $this->app->booted(function ($app): void {
+            $app->make(AnalyticsAreaResources::class)->register();
+            $app->make(Traffic\TrafficPanelResources::class)->register();
+        });
 
         // The injection seam: two directives, placement-agnostic across both fleet
         // root-Blade shapes (@inertiaHead/@inertia; <x-inertia::head>/<x-inertia::app/>).

@@ -1,0 +1,38 @@
+---
+title: Traffic Sources
+segment: beam.analytics.sources
+nav_order: 110
+excerpt: Where the Traffic area reads a site's traffic from, each a read-only port onto a measurement provider. None ships here.
+---
+
+# Traffic Sources
+
+`beam.analytics.sources` holds the **Traffic Sources**: read-only `TrafficSource` classes, keyed by each source's own
+`key()`, that the Traffic area reads a site's users, sessions, views, daily trend, top pages and referrers from, as one
+provider-neutral `TrafficSnapshot`. This package ships **no** source, and an empty registry is a valid state: Traffic then
+reads "Not connected". A Google Analytics source is ticket 14.
+
+A reader's request **never** asks a source. Traffic shows the last reading from the cache, with when it was measured, and a
+queued job (in exec's RefreshDoctorPosture shape) refreshes a missing or stale reading, inside the scope's own tenant. So a
+slow or failing source never slows or breaks the Analytics section. A source's `covers()` decides, without an outbound call,
+whether it measures a scope at all: a tenant no source covers reads "Not connected", never the install's numbers.
+
+Contribute one from your provider, naming the registry as a string so it costs no composer edge:
+
+```php
+$this->app->afterResolving('Splicewire\Beam\Analytics\Traffic\TrafficSourceRegistry', fn ($sources) => $sources
+    ->add(GoogleAnalyticsSource::class, 'acme/google-analytics'));
+```
+
+{/* registry-facts:start — generated from the #[IsRegistry] declaration; regenerate it, do not edit between these markers. */}
+
+- **Root:** `beam.analytics.sources`
+- **Entries:** `class-string<Splicewire\Beam\Analytics\Contracts\TrafficSource>`
+- **Duplicate keys:** Reject — registering a taken key throws
+- **Population:** Optional — an empty registry is normal
+- **Order:** `100` (display order, ascending)
+- **Declared by:** `Splicewire\Beam\Analytics\Traffic\TrafficSourceRegistry`
+
+{/* registry-facts:end */}
+
+<RegistryRegistrants root="beam.analytics.sources" />

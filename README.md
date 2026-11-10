@@ -179,6 +179,16 @@ The package ships **Measurement**: which providers are on, the environments allo
 and whether the tag's slots are placed. It shows configuration and calls no provider. It also ships **Events**: the Event
 Vocabulary, each event with its parameters and labelled as declared by a package or by the host, never as fired.
 
+And it ships **Traffic**: a site's users, sessions and views, with when they were measured, read from a Traffic Source in
+the [`beam.analytics.sources`](docs/registries/beam.analytics.sources.mdx) registry through a read-only, provider-neutral
+port (`TrafficSource` returning a `TrafficSnapshot`). No source ships here, so out of the box Traffic reads "Not
+connected". A reader's request never asks a source: it reads the last reading from the cache ("Not measured yet" before
+the first), and a queued job refreshes a missing or stale one (`beam.analytics.traffic.ttl`, default 3600 s) inside the
+scope's own tenant, refusing and reporting if it finds itself in another. A tenant no source covers reads "Not connected",
+never the install's numbers. Beside it, three panels draw the reading through frame's existing widgets: **Traffic trend**
+(`trend-card`, views per day), **Top pages** and **Referrers** (`stat-row`). They are section pages of their own, because a
+trend card draws one resource's whole summary as its series.
+
 Packages add areas from their own providers, naming the registry as a string, with no composer edge to this package.
 `php artisan splicewire:beam:analytics:make-area` writes a conforming area, checks the class it wrote, and exits 1 on a
 finding.
