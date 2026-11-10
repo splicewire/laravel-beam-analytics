@@ -38,7 +38,21 @@ Install scope, and in Tenant scope only the tenant's own, read through the `Meas
 
 ## Contributing an area
 
-Write a class that implements `AnalyticsArea` and declare what it is drawn under:
+The generator writes a conforming area and prints the line that registers it:
+
+```bash
+php artisan splicewire:beam:analytics:make-area AudienceArea --icon=Users --order=40
+# into a package rather than the host's app/ (--path absolute, or relative to the app's base path):
+php artisan splicewire:beam:analytics:make-area AudienceArea --namespace='Acme\Accounts\Analytics' --path=/path/to/acme-accounts/src/Analytics
+```
+
+It takes the key from the class name (`AudienceArea` becomes `audience`) unless you pass `--key`, and `--label`,
+`--icon`, `--order` and `--ability` fill the rest of the `#[Area]`. Before it writes, it refuses a key that is not
+kebab-case or that an area already holds. After it writes, it loads the class and checks it the way the registry will. A
+finding is printed, the file is left for you to fix, and the command exits 1. A host can publish its own stub at
+`stubs/analytics-area.stub`, and the same check applies to what that stub writes.
+
+By hand, write a class that implements `AnalyticsArea` and declare what it is drawn under:
 
 ```php
 use Splicewire\Beam\Analytics\Areas\AnalyticsArea;

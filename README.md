@@ -178,6 +178,8 @@ resource `analytics-{key}`. Its page and its card read one figures path, so they
 The package ships **Measurement**: which providers are on, the environments allowed to render a tag, the consent regions,
 and whether the tag's slots are placed. It shows configuration and calls no provider. Packages add areas from their own
 providers, naming the registry as a string, with no composer edge to this package.
+`php artisan splicewire:beam:analytics:make-area` writes a conforming area, checks the class it wrote, and exits 1 on a
+finding.
 
 ## Doctor
 

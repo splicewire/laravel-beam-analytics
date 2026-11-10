@@ -9,6 +9,7 @@ use Splicewire\Beam\Analytics\Areas\AnalyticsAreaRegistry;
 use Splicewire\Beam\Analytics\Areas\AnalyticsAreaResources;
 use Splicewire\Beam\Analytics\Areas\AnalyticsReading;
 use Splicewire\Beam\Analytics\Console\BeamAnalyticsDoctorCommand;
+use Splicewire\Beam\Analytics\Console\MakeAnalyticsAreaCommand;
 use Splicewire\Beam\Analytics\Contracts\MeasurementSettings;
 use Splicewire\Beam\Analytics\Doctor\AnalyticsWiringAudit;
 use Splicewire\Beam\Analytics\Events\AnalyticsEventRegistry;
@@ -28,7 +29,7 @@ class BeamAnalyticsServiceProvider extends PackageServiceProvider
         $package
             ->name('laravel-beam-analytics')
             ->hasConfigFile('beam/analytics')
-            ->hasCommand(BeamAnalyticsDoctorCommand::class);
+            ->hasCommands([BeamAnalyticsDoctorCommand::class, MakeAnalyticsAreaCommand::class]);
     }
 
     public function packageRegistered(): void
