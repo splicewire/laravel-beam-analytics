@@ -35,6 +35,14 @@ tenant's page and card show that tenant's own figures.
 where Consent Mode denies analytics storage by default, and whether the tag's two slots are placed in a root template. It
 shows configuration. It measures no traffic and calls no provider. Each provider is shown with its id: the install's in
 Install scope, and in Tenant scope only the tenant's own, read through the `MeasurementSettings` port, never the install's.
+Its providers figure links to the host's `site-settings` destination.
+
+**Events**, `analytics-events`: the Event Vocabulary, one row per event a site may report, with its parameters and whether
+a package or the host declared it, in the order `x-events` serves them. Every row says "Declared by …", because nothing
+records an event firing. Each row links to the host's `site-editor` destination.
+
+A figure links only through a destination the host binds on the `AnalyticsDestinations` port, only where that route
+exists and the viewer passes its ability. With no binding there are no links.
 
 ## Contributing an area
 

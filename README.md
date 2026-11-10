@@ -176,8 +176,10 @@ resource `analytics-{key}`. Its page and its card read one figures path, so they
 `analytics.view` first, so an area can narrow the gate and never widen it.
 
 The package ships **Measurement**: which providers are on, the environments allowed to render a tag, the consent regions,
-and whether the tag's slots are placed. It shows configuration and calls no provider. Packages add areas from their own
-providers, naming the registry as a string, with no composer edge to this package.
+and whether the tag's slots are placed. It shows configuration and calls no provider. It also ships **Events**: the Event
+Vocabulary, each event with its parameters and labelled as declared by a package or by the host, never as fired.
+
+Packages add areas from their own providers, naming the registry as a string, with no composer edge to this package.
 `php artisan splicewire:beam:analytics:make-area` writes a conforming area, checks the class it wrote, and exits 1 on a
 finding.
 
@@ -190,6 +192,7 @@ can read an area.
 ```php
 use Splicewire\Beam\Analytics\Contracts\AnalyticsDestinations;
 use Splicewire\Beam\Analytics\Destinations\AnalyticsDestination;
+use Splicewire\Beam\Analytics\Scope\AnalyticsScope;
 
 $this->app->bind(AnalyticsDestinations::class, fn () => new class implements AnalyticsDestinations {
     public function destination(string $name, AnalyticsScope $scope): ?AnalyticsDestination

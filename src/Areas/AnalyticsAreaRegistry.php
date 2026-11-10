@@ -18,8 +18,8 @@ use UnexpectedValueException;
 
 /**
  * Every Analytics Area the section draws, keyed by area key, each entry an {@see AnalyticsArea} class. This package's
- * {@see MeasurementArea} is held from the start; a package contributes beside it from its own provider, naming this class
- * only as a string, so it costs no composer edge:
+ * {@see MeasurementArea} and {@see EventsArea} are held from the start; a package contributes beside them from its own
+ * provider, naming this class only as a string, so it costs no composer edge:
  *
  * ```php
  * $this->app->afterResolving('Splicewire\Beam\Analytics\Areas\AnalyticsAreaRegistry', fn ($areas) => $areas
@@ -40,7 +40,7 @@ use UnexpectedValueException;
 class AnalyticsAreaRegistry implements Gated, Registry
 {
     /** The areas this package ships, in the order they are held. */
-    public const PACKAGE = [MeasurementArea::class];
+    public const PACKAGE = [MeasurementArea::class, EventsArea::class];
 
     private ?BasicRegistry $store = null;
 
