@@ -3,6 +3,7 @@
 namespace Splicewire\Beam\Analytics;
 
 use Illuminate\Support\Facades\Blade;
+use Rushing\DataFilters\DataFilterManager;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Splicewire\Beam\Analytics\Areas\AnalyticsAreaRegistry;
@@ -97,6 +98,15 @@ class BeamAnalyticsServiceProvider extends PackageServiceProvider
         }
         $this->app->make(AnalyticsAreaResources::class)->register();
         $this->app->make(Traffic\TrafficPanelResources::class)->register();
+
+        // The `period` facet's select (ticket 09) reads its choices from an Options Source, the way beam's own resource
+        // registry declares its pickers. Guarded the same way: a host without data-filters draws no facet panel to fill.
+        if ($this->app->bound(DataFilterManager::class)) {
+            $this->app->make(DataFilterManager::class)->options(
+                AnalyticsPeriod::OPTIONS_SOURCE,
+                static fn (?string $search = null): array => AnalyticsPeriod::options($search),
+            );
+        }
         $this->app->booted(function ($app): void {
             $app->make(AnalyticsAreaResources::class)->register();
             $app->make(Traffic\TrafficPanelResources::class)->register();

@@ -21,10 +21,14 @@ final class FakeTrafficSource implements TrafficSource
     /** @var list<string> scope keys read() was asked for, in order */
     public static array $asked = [];
 
+    /** @var list<string> `scope@days` for each read(), in order (ticket 09: which period a refresh asked for) */
+    public static array $askedPeriods = [];
+
     public static function reset(): void
     {
         self::$readings = [];
         self::$asked = [];
+        self::$askedPeriods = [];
     }
 
     public static function key(): string
@@ -41,7 +45,9 @@ final class FakeTrafficSource implements TrafficSource
     {
         $key = self::scopeKey($scope);
         self::$asked[] = $key;
-        $reading = self::$readings[$key] ?? throw new RuntimeException("The fake does not cover [{$key}].");
+        self::$askedPeriods[] = $key.'@'.$period->days;
+        // A per-period reading (`install@7`) wins over the scope's, so a test can tell one period's numbers from another's.
+        $reading = self::$readings[$key.'@'.$period->days] ?? self::$readings[$key] ?? throw new RuntimeException("The fake does not cover [{$key}].");
 
         if ($reading instanceof \Throwable) {
             throw $reading;

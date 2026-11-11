@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Route;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionClass;
 use RuntimeException;
+use Rushing\DataFilters\DataFilterManager;
 use Schemastud\Frame\Attributes\Summary;
 use Schemastud\Frame\Data\SummaryFigureData;
 use Splicewire\Beam\Analytics\Contracts\AnalyticsDestinations;
@@ -22,6 +23,8 @@ use Splicewire\Beam\Analytics\Traffic\TrafficNeedsQueueWorker;
 use Splicewire\Beam\Analytics\Traffic\TrafficReadings;
 use Splicewire\Beam\Analytics\Traffic\TrafficScopeMismatch;
 use Splicewire\Beam\Analytics\Traffic\TrafficSourceRegistry;
+use Splicewire\Beam\Particle\Backing\DeclaresFilterVocabulary;
+use Splicewire\Beam\Particle\ParticleResourceRegistry;
 use Splicewire\Beam\Realm\Contracts\TenancyContext;
 
 /**
@@ -465,5 +468,162 @@ class TrafficAreaTest extends SectionTestCase
         $this->insideTenant('globex');
         $this->assertSame('Not measured yet', $this->card($analyst)[0]['value'], 'globex is never served acme\'s reading');
         $this->assertSame(['tenant:acme'], FakeTrafficSource::$asked);
+    }
+
+    // ---- Ticket 09: a period facet on area pages --------------------------------------------------------------------------
+
+    /** Run the refresh job for one period, as a worker would. */
+    private function refreshOver(AnalyticsScope $scope, int $days): void
+    {
+        RefreshTrafficReading::for($scope, new AnalyticsPeriod($days))->handle(app(TrafficReadings::class));
+    }
+
+    /** An area or panel page with `filter[period]` set to `$period` (raw, so a test can send an unknown value or a list). */
+    private function pageOver(SectionUser $reader, mixed $period, string $resource = 'analytics-traffic'): array
+    {
+        $query = http_build_query(['filter' => ['period' => $period]]);
+
+        return $this->actingAs($reader)->getJson("/frame/resources/{$resource}?{$query}")->assertOk()->json('data');
+    }
+
+    /** @return array<string, mixed> a page's figures keyed by id, value only */
+    private static function byId(array $rows): array
+    {
+        return array_column($rows, 'value', 'id');
+    }
+
+    #[Test]
+    public function traffic_and_its_panels_offer_a_period_select_and_areas_that_ignore_the_period_offer_none(): void
+    {
+        $particles = app(ParticleResourceRegistry::class);
+
+        foreach (['analytics-traffic', 'analytics-traffic-trend', 'analytics-traffic-pages', 'analytics-traffic-referrers'] as $key) {
+            $backing = $particles->get($key)->backing;
+            $this->assertInstanceOf(DeclaresFilterVocabulary::class, $backing, $key);
+            $this->assertSame(['period'], $backing->filterVocabulary()->names(), $key);
+            $this->assertSame(
+                ['operator' => 'exact', 'name' => 'period', 'control' => 'select', 'optionsRef' => AnalyticsPeriod::OPTIONS_SOURCE, 'valueKey' => 'value', 'labelKey' => 'label', 'searchable' => true],
+                $backing->filterVocabulary()->toSchema()['properties']['period']['x-filter'],
+                $key,
+            );
+        }
+        foreach (['analytics-measurement', 'analytics-events'] as $key) {
+            $this->assertNotInstanceOf(DeclaresFilterVocabulary::class, $particles->get($key)->backing, "{$key} does not depend on the period, so it offers no choice it would ignore");
+        }
+
+        $this->assertSame(
+            [['value' => '7', 'label' => 'Last 7 days'], ['value' => '28', 'label' => 'Last 28 days'], ['value' => '90', 'label' => 'Last 90 days']],
+            app(DataFilterManager::class)->resolveOptions(AnalyticsPeriod::OPTIONS_SOURCE),
+            'the select reads its choices from the registered Options Source',
+        );
+    }
+
+    #[Test]
+    public function each_period_reads_its_own_cached_reading_and_the_page_and_panels_follow_the_url(): void
+    {
+        Bus::fake();
+        $this->connect();
+        FakeTrafficSource::$readings['install'] = FakeTrafficSource::snapshot(28);
+        foreach ([7, 28, 90] as $days) {
+            FakeTrafficSource::$readings["install@{$days}"] = FakeTrafficSource::snapshot($days);
+        }
+        $analyst = $this->analyst();
+        $this->travelTo('2026-11-10 12:00:00');
+        foreach ([7, 28, 90] as $days) {
+            $this->refreshOver(AnalyticsScope::install(), $days);
+        }
+
+        foreach ([7, 28, 90] as $days) {
+            $page = self::byId($this->pageOver($analyst, (string) $days));
+            $this->assertSame($days, $page['users'], "the {$days}-day page reads the {$days}-day reading");
+            $this->assertSame("2026-11-10 12:00 UTC · Last {$days} days", $page['measured']);
+            $this->assertSame($days * 2, $this->pageOver($analyst, (string) $days, 'analytics-traffic-pages')[0]['value'], "the pages panel follows the URL too ({$days})");
+        }
+        $this->assertSame(28, self::byId($this->page($analyst))['users'], 'no filter reads the default, 28 days');
+
+        $keys = array_map(fn (int $days): string => app(TrafficReadings::class)->key(AnalyticsScope::install(), new AnalyticsPeriod($days)), [7, 28, 90]);
+        $this->assertCount(3, array_unique($keys), 'one cache entry per (scope, period)');
+        $this->assertSame(['install@7', 'install@28', 'install@90'], FakeTrafficSource::$askedPeriods, 'only the refresh jobs asked the source');
+        Bus::assertNothingDispatched();
+    }
+
+    #[Test]
+    public function an_unknown_period_reads_the_default(): void
+    {
+        Bus::fake();
+        $this->connect();
+        FakeTrafficSource::$readings['install'] = FakeTrafficSource::snapshot(28);
+        FakeTrafficSource::$readings['install@14'] = FakeTrafficSource::snapshot(14);
+        $analyst = $this->analyst();
+        $this->travelTo('2026-11-10 12:00:00');
+        $this->refreshOver(AnalyticsScope::install(), 28);
+        $this->refreshOver(AnalyticsScope::install(), 14); // a reading the facet must never reach
+
+        $default = self::byId($this->page($analyst));
+        foreach (['14', '0', '-7', '7.5', 'abc', '', ['7'], '0007'] as $unknown) {
+            $this->assertSame($default, self::byId($this->pageOver($analyst, $unknown)), 'filter[period]='.json_encode($unknown).' reads the default');
+        }
+        $this->assertSame(28, $default['users']);
+        $this->assertSame(AnalyticsPeriod::OVERVIEW_DAYS, AnalyticsPeriod::fromFilter('nope')->days);
+        $this->assertSame(90, AnalyticsPeriod::fromFilter(90)->days, 'an integer choice is accepted as well as its string');
+    }
+
+    #[Test]
+    public function changing_period_asks_no_source_on_the_request_and_queues_that_periods_refresh(): void
+    {
+        Bus::fake();
+        $this->connect();
+        FakeTrafficSource::$readings['install'] = FakeTrafficSource::snapshot(28);
+        $analyst = $this->analyst();
+
+        $this->assertSame('Not measured yet', $this->pageOver($analyst, '7')[0]['value']);
+        $this->assertSame([], $this->pageOver($analyst, '90', 'analytics-traffic-trend'), 'a panel has no rows until its period is measured');
+
+        $this->assertSame([], FakeTrafficSource::$asked, 'a reader\'s request never asks the source, whatever the period');
+        Bus::assertDispatchedAfterResponse(RefreshTrafficReading::class, fn (RefreshTrafficReading $job): bool => $job->tenantId === null && $job->days === 7);
+        Bus::assertDispatchedAfterResponse(RefreshTrafficReading::class, fn (RefreshTrafficReading $job): bool => $job->tenantId === null && $job->days === 90);
+    }
+
+    #[Test]
+    public function a_tenant_never_reads_the_installs_entry_for_a_period_and_keeps_08s_honesty_per_period(): void
+    {
+        Bus::fake();
+        Exceptions::fake();
+        $this->connect();
+        FakeTrafficSource::$readings['install'] = FakeTrafficSource::snapshot(10);
+        FakeTrafficSource::$readings['tenant:acme'] = FakeTrafficSource::snapshot(70);
+        $analyst = $this->analyst();
+        $this->refreshOver(AnalyticsScope::install(), 7);
+
+        $this->insideTenant('acme');
+        $sync = self::byId($this->pageOver($analyst, '7'));
+        $this->assertSame(['status' => 'Not measured yet ('.TrafficNeedsQueueWorker::REASON.')'], $sync, 'acme on a sync queue: its own honest state, never the install\'s 7-day reading');
+        Bus::assertNotDispatched(RefreshTrafficReading::class);
+
+        $this->realQueue();
+        $this->assertSame('Not measured yet', $this->pageOver($analyst, '7')[0]['value']);
+        Bus::assertDispatched(RefreshTrafficReading::class, fn (RefreshTrafficReading $job): bool => $job->tenantId === 'acme' && $job->days === 7);
+        $this->refreshOver(AnalyticsScope::tenant('acme'), 7);
+        $this->assertSame(70, self::byId($this->pageOver($analyst, '7'))['users'], 'acme\'s own 7-day reading');
+        $this->assertSame(['install@7', 'tenant:acme@7'], FakeTrafficSource::$askedPeriods);
+    }
+
+    #[Test]
+    public function the_overview_card_stays_at_28_days_and_says_so(): void
+    {
+        Bus::fake();
+        $this->connect();
+        FakeTrafficSource::$readings['install'] = FakeTrafficSource::snapshot(28);
+        FakeTrafficSource::$readings['install@7'] = FakeTrafficSource::snapshot(7);
+        $analyst = $this->analyst();
+        $this->travelTo('2026-11-10 12:00:00');
+        $this->refreshOver(AnalyticsScope::install(), 28);
+        $this->refreshOver(AnalyticsScope::install(), 7);
+
+        foreach (['analytics-traffic', 'analytics-traffic-trend', 'analytics-traffic-pages', 'analytics-traffic-referrers'] as $key) {
+            $summary = $this->actingAs($analyst)->getJson("/frame/resources/{$key}/summary?".http_build_query(['filter' => ['period' => '7']]))->assertOk();
+            $this->assertSame('Last 28 days', $summary->json('overview.period'), "{$key}: the overview card is labelled with its window");
+        }
+        $this->assertSame(28, $this->card($analyst)[0]['value'], 'the overview reads 28 days, whatever a page chose');
     }
 }

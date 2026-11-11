@@ -26,10 +26,12 @@ use Splicewire\Beam\Analytics\Traffic\TrafficStatus;
  * - **Measured:** the totals and when they were measured, marked when a refresh is due or the last one failed.
  * - **Couldn't be measured:** the source threw and there is no earlier reading.
  *
+ * It {@see MeasuresOverPeriod}: its page offers 7, 28 or 90 days (ticket 09), and the overview card reads 28, labelled.
+ *
  * Scaffolded by `splicewire:beam:analytics:make-area TrafficArea` (ticket 08), then filled in.
  */
 #[Area(key: 'traffic', label: 'Traffic', icon: 'Activity', order: 15, ability: null)]
-final class TrafficArea implements AnalyticsArea
+final class TrafficArea implements MeasuresOverPeriod
 {
     public function __construct(
         private readonly TrafficReadings $readings,

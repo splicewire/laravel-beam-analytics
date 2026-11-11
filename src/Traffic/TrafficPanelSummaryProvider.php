@@ -3,6 +3,7 @@
 namespace Splicewire\Beam\Analytics\Traffic;
 
 use Schemastud\Frame\Contracts\ResourceSummaryProvider;
+use Schemastud\Frame\Data\OverviewData;
 use Schemastud\Frame\Data\SummaryFigureData;
 use Schemastud\Frame\Data\SummaryResponseData;
 use Schemastud\Frame\Registry\ResourceDefinition;
@@ -50,7 +51,7 @@ final class TrafficPanelSummaryProvider implements ResourceSummaryProvider
             label: $resource->resolvedLabel(),
             icon: $resource->nav->icon,
             figures: $figures,
-            overview: null,
+            overview: new OverviewData(period: $this->reading->period->label()), // the overview card says its window (ticket 09)
         );
     }
 }

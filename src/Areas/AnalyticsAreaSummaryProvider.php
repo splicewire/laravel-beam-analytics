@@ -3,6 +3,7 @@
 namespace Splicewire\Beam\Analytics\Areas;
 
 use Schemastud\Frame\Contracts\ResourceSummaryProvider;
+use Schemastud\Frame\Data\OverviewData;
 use Schemastud\Frame\Data\SummaryResponseData;
 use Schemastud\Frame\Registry\ResourceDefinition;
 use Splicewire\Beam\Analytics\Data\AnalyticsFigureData;
@@ -42,7 +43,7 @@ final class AnalyticsAreaSummaryProvider implements ResourceSummaryProvider
             label: $resource->resolvedLabel(),
             icon: $resource->nav->icon,
             figures: array_values(array_map(fn (AnalyticsFigureData $figure) => $figure->toSummaryFigure(), $figures)),
-            overview: null,
+            overview: new OverviewData(period: $this->reading->period->label()), // the overview card says its window (ticket 09)
         );
     }
 }

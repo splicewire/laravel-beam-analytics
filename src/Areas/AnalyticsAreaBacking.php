@@ -33,8 +33,12 @@ final class AnalyticsAreaBacking implements Unpaged
         return new CursorPaginator($rows, max(1, count($rows)), null, ['parameters' => ['id']]);
     }
 
-    /** @return list<AnalyticsFigureData> */
-    public function figures(): array
+    /**
+     * The area's figures for `$reading`, the request's when null. ({@see PeriodAreaBacking} passes the reading its facet asks for.)
+     *
+     * @return list<AnalyticsFigureData>
+     */
+    public function figures(?AnalyticsReading $reading = null): array
     {
         $container = Container::getInstance();
         $areas = $container->make(AnalyticsAreaRegistry::class);
@@ -44,6 +48,6 @@ final class AnalyticsAreaBacking implements Unpaged
             return []; // the area left the registry: an honest absence, never an invented zero
         }
 
-        return $areas->figures(AreaDefinition::of($class), $container->make(AnalyticsReading::class));
+        return $areas->figures(AreaDefinition::of($class), $reading ?? $container->make(AnalyticsReading::class));
     }
 }

@@ -48,7 +48,8 @@ final class AnalyticsAreaResources
     {
         return new ParticleResource(
             key: $area->resourceKey(),
-            backing: new AnalyticsAreaBacking($area->key()),
+            // An area that measures over a period gets a page offering the period (ticket 09); any other, none it would ignore.
+            backing: is_subclass_of($area->class, MeasuresOverPeriod::class) ? new PeriodAreaBacking($area->key()) : new AnalyticsAreaBacking($area->key()),
             data: AnalyticsFigureData::class,
             input: false,
             label: $area->area->label,
