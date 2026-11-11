@@ -516,6 +516,22 @@ class TrafficAreaTest extends SectionTestCase
             app(DataFilterManager::class)->resolveOptions(AnalyticsPeriod::OPTIONS_SOURCE),
             'the select reads its choices from the registered Options Source',
         );
+
+        // The wire the facets panel reads, on both hosts: the list's filter schema and the select's options.
+        $analyst = $this->analyst();
+        $this->actingAs($analyst)->getJson('/frame/resources/analytics-traffic/filters/schema')->assertOk()
+            ->assertJsonPath('properties.period.x-filter.control', 'select')
+            ->assertJsonPath('properties.period.x-filter.optionsRef', AnalyticsPeriod::OPTIONS_SOURCE);
+        $this->assertSame(['7', '28', '90'], array_column(
+            $this->actingAs($analyst)->getJson('/frame/resources/analytics-traffic/filters/options/'.AnalyticsPeriod::OPTIONS_SOURCE)->assertOk()->json('data'),
+            'value',
+        ));
+        $this->assertSame(['90'], array_column(
+            $this->actingAs($analyst)->getJson('/frame/resources/analytics-traffic/filters/options/'.AnalyticsPeriod::OPTIONS_SOURCE.'?search=90')->assertOk()->json('data'),
+            'value',
+        ), 'the type-ahead narrows on the server (the panel does not filter an optionsRef list itself)');
+        $this->actingAs($analyst)->getJson('/frame/resources/analytics-measurement/filters/options/'.AnalyticsPeriod::OPTIONS_SOURCE)
+            ->assertNotFound(); // a resource that does not declare the facet does not serve its options
     }
 
     #[Test]
