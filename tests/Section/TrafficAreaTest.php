@@ -520,8 +520,8 @@ class TrafficAreaTest extends SectionTestCase
         // The wire the facets panel reads, on both hosts: the list's filter schema and the select's options.
         $analyst = $this->analyst();
         $this->actingAs($analyst)->getJson('/frame/resources/analytics-traffic/filters/schema')->assertOk()
-            ->assertJsonPath('properties.period.x-filter.control', 'select')
-            ->assertJsonPath('properties.period.x-filter.optionsRef', AnalyticsPeriod::OPTIONS_SOURCE);
+            ->assertJsonPath('data.properties.period.x-filter.control', 'select')
+            ->assertJsonPath('data.properties.period.x-filter.optionsRef', AnalyticsPeriod::OPTIONS_SOURCE);
         $this->assertSame(['7', '28', '90'], array_column(
             $this->actingAs($analyst)->getJson('/frame/resources/analytics-traffic/filters/options/'.AnalyticsPeriod::OPTIONS_SOURCE)->assertOk()->json('data'),
             'value',
