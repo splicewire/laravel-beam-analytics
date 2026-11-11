@@ -5,6 +5,7 @@ namespace Splicewire\Beam\Analytics\Data;
 use Schemastud\DataSchemas\Attributes\Description;
 use Schemastud\DataSchemas\Attributes\Title;
 use Schemastud\Frame\Attributes\Column;
+use Schemastud\Frame\Attributes\Overview;
 use Schemastud\Frame\Attributes\Summary;
 use Schemastud\Frame\Data\SummaryFigureData;
 use Spatie\TypeScriptTransformer\Attributes\TypeScript;
@@ -15,6 +16,7 @@ use Splicewire\Beam\Data\BeamData;
  * frame's `stat-row` draws as label and value.
  */
 #[TypeScript, Title('Traffic top entry'), Summary('stat-row')]
+#[Overview] // ticket 09 criterion 4: an overview row, so frame draws the inherited stat-row inside the overview chrome, whose subtitle is the summary's period
 #[Description('One entry in a Traffic top list, a page or a referrer: a row on its page and a figure on its card.')]
 class TrafficRankData extends BeamData
 {

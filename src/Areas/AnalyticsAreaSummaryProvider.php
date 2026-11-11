@@ -43,7 +43,8 @@ final class AnalyticsAreaSummaryProvider implements ResourceSummaryProvider
             label: $resource->resolvedLabel(),
             icon: $resource->nav->icon,
             figures: array_values(array_map(fn (AnalyticsFigureData $figure) => $figure->toSummaryFigure(), $figures)),
-            overview: new OverviewData(period: $this->reading->period->label()), // the overview card says its window (ticket 09)
+            // The overview card says its window (ticket 09), and only an area that measures over one has a window to say.
+            overview: is_subclass_of($area->class, MeasuresOverPeriod::class) ? new OverviewData(period: $this->reading->period->label()) : null,
         );
     }
 }

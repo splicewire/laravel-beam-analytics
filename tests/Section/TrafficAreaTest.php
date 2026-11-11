@@ -11,6 +11,7 @@ use RuntimeException;
 use Rushing\DataFilters\DataFilterManager;
 use Schemastud\Frame\Attributes\Summary;
 use Schemastud\Frame\Data\SummaryFigureData;
+use Schemastud\Frame\Registry\WidgetContextProjector;
 use Splicewire\Beam\Analytics\Contracts\AnalyticsDestinations;
 use Splicewire\Beam\Analytics\Data\TrafficPointData;
 use Splicewire\Beam\Analytics\Data\TrafficRankData;
@@ -23,6 +24,8 @@ use Splicewire\Beam\Analytics\Traffic\TrafficNeedsQueueWorker;
 use Splicewire\Beam\Analytics\Traffic\TrafficReadings;
 use Splicewire\Beam\Analytics\Traffic\TrafficScopeMismatch;
 use Splicewire\Beam\Analytics\Traffic\TrafficSourceRegistry;
+use Splicewire\Beam\Dashboard\DashboardParticipation;
+use Splicewire\Beam\Dashboard\RailLeaves;
 use Splicewire\Beam\Particle\Backing\DeclaresFilterVocabulary;
 use Splicewire\Beam\Particle\ParticleResourceRegistry;
 use Splicewire\Beam\Realm\Contracts\TenancyContext;
@@ -622,6 +625,39 @@ class TrafficAreaTest extends SectionTestCase
         $this->refreshOver(AnalyticsScope::tenant('acme'), 7);
         $this->assertSame(70, self::byId($this->pageOver($analyst, '7'))['users'], 'acme\'s own 7-day reading');
         $this->assertSame(['install@7', 'tenant:acme@7'], FakeTrafficSource::$askedPeriods);
+    }
+
+    #[Test]
+    public function every_period_dependent_overview_card_is_drawn_with_its_window_and_the_others_claim_none(): void
+    {
+        Bus::fake();
+        $this->connect();
+        FakeTrafficSource::$readings['install'] = FakeTrafficSource::snapshot(28);
+        $analyst = $this->analyst();
+        $this->travelTo('2026-11-10 12:00:00');
+        $this->refreshOver(AnalyticsScope::install(), 28);
+        $particles = app(ParticleResourceRegistry::class);
+
+        // 09 AMEND 1 (criterion 4). A panel's dashboard row is an OVERVIEW row whose overview binding names no widget of its
+        // own, so frame's DashboardCard draws the inherited summary widget (trend-card, stat-row) inside its OverviewFrame,
+        // and that frame's subtitle is the summary's overview.period. Both the console and the SPA draw rows this way.
+        foreach (['analytics-traffic-trend' => 'trend-card', 'analytics-traffic-pages' => 'stat-row', 'analytics-traffic-referrers' => 'stat-row'] as $key => $widget) {
+            $definition = $particles->definition($key);
+            $this->assertSame('overview', DashboardParticipation::contextFor($definition, new RailLeaves([])), "{$key} is an overview row");
+            $contexts = (new WidgetContextProjector)->forClass(new ReflectionClass($definition->data));
+            $this->assertSame(['participates' => true], $contexts['overview'], "{$key}: the overview inherits its summary widget, so frame draws the overview chrome");
+            $this->assertSame($widget, $contexts['summary']['widget'], $key);
+            $this->assertSame('Last 28 days', $this->actingAs($analyst)->getJson("/frame/resources/{$key}/summary")->assertOk()->json('overview.period'), "{$key}: the chrome's subtitle");
+        }
+
+        // Traffic's own card says its window in its Measured figure, drawn on every renderer.
+        $this->assertSame('2026-11-10 12:00 UTC · Last 28 days', self::byId($this->page($analyst))['measured']);
+        $this->assertSame('Last 28 days', $this->actingAs($analyst)->getJson('/frame/resources/analytics-traffic/summary')->json('overview.period'));
+
+        // An area that measures over no period claims no window.
+        foreach (['analytics-measurement', 'analytics-events'] as $key) {
+            $this->assertNull($this->actingAs($analyst)->getJson("/frame/resources/{$key}/summary")->assertOk()->json('overview'), "{$key} has no window to say");
+        }
     }
 
     #[Test]
