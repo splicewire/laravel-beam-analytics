@@ -51,9 +51,7 @@ final class TrafficReadings
         $entry = $this->entry($scope, $period);
 
         if ($entry === null) {
-            $this->refreshLater($scope, $period);
-
-            return TrafficStatus::notMeasured();
+            return TrafficStatus::notMeasured($this->refreshLater($scope, $period));
         }
 
         [$snapshot, $measuredAt, $failedAt] = $entry;
@@ -96,10 +94,15 @@ final class TrafficReadings
      */
     public function refresh(AnalyticsScope $scope, AnalyticsPeriod $period): bool
     {
+        $keepQueued = false;
+
         try {
             $running = $this->runningScope();
 
             if (! self::same($running, $scope)) {
+                // The queued flag is KEPT until its ttl, so reads do not queue a job that would be refused again: one refusal,
+                // and one report, per ttl window, not one per read (08 amend A).
+                $keepQueued = true;
                 report(new TrafficScopeMismatch($scope, $running));
 
                 return false;
@@ -130,7 +133,9 @@ final class TrafficReadings
 
             return true;
         } finally {
-            $this->cache->forget($this->queuedKey($scope, $period));
+            if (! $keepQueued) {
+                $this->cache->forget($this->queuedKey($scope, $period));
+            }
         }
     }
 
@@ -184,21 +189,40 @@ final class TrafficReadings
         return $failedAt !== null ? [null, null, $failedAt] : null;
     }
 
-    private function refreshLater(AnalyticsScope $scope, AnalyticsPeriod $period): void
+    /**
+     * Queue a refresh, at most one outstanding per scope and period. Returns null when one is (or already was) queued, or the
+     * reason it cannot be: in TENANT scope on a SYNC queue a job would run after the response, after the request's tenancy
+     * has ended, and the guard would refuse it every time (08 amend B). So none is dispatched there; the reader is told why,
+     * and it is reported once per ttl window. On a real queue the job is dispatched normally, and the host's queue tenancy
+     * (stancl's QueueTenancyBootstrapper) carries the tenant into it.
+     */
+    private function refreshLater(AnalyticsScope $scope, AnalyticsPeriod $period): ?string
     {
+        $sync = $this->config->get('queue.connections.'.$this->config->get('queue.default').'.driver') === 'sync';
+
+        if ($scope->isTenant() && $sync) {
+            if ($this->cache->add($this->queuedKey($scope, $period).':needs-worker-reported', true, max(1, $this->ttl()))) {
+                report(new TrafficNeedsQueueWorker($scope));
+            }
+
+            return TrafficNeedsQueueWorker::REASON;
+        }
+
         if (! $this->cache->add($this->queuedKey($scope, $period), true, max(1, $this->ttl()))) {
-            return; // one is already queued
+            return null; // one is already queued
         }
 
         $job = RefreshTrafficReading::for($scope, $period);
 
-        if ($this->config->get('queue.connections.'.$this->config->get('queue.default').'.driver') === 'sync') {
-            $this->bus->dispatchAfterResponse($job);
+        if ($sync) {
+            $this->bus->dispatchAfterResponse($job); // Install scope: no tenancy to lose after the response
 
-            return;
+            return null;
         }
 
         $this->bus->dispatch($job);
+
+        return null;
     }
 
     /** The scope this process is running in, as beam's TenancyContext reports it: Install when no tenancy is bound. */

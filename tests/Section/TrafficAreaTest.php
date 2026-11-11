@@ -18,6 +18,7 @@ use Splicewire\Beam\Analytics\Scope\AnalyticsPeriod;
 use Splicewire\Beam\Analytics\Scope\AnalyticsScope;
 use Splicewire\Beam\Analytics\Tests\Support\FakeTrafficSource;
 use Splicewire\Beam\Analytics\Traffic\RefreshTrafficReading;
+use Splicewire\Beam\Analytics\Traffic\TrafficNeedsQueueWorker;
 use Splicewire\Beam\Analytics\Traffic\TrafficReadings;
 use Splicewire\Beam\Analytics\Traffic\TrafficScopeMismatch;
 use Splicewire\Beam\Analytics\Traffic\TrafficSourceRegistry;
@@ -259,7 +260,7 @@ class TrafficAreaTest extends SectionTestCase
         $this->assertSame(10, $this->card($analyst)[0]['value'], 'acme reads its own reading');
 
         $this->insideTenant('globex');
-        $this->assertSame('Not measured yet', $this->card($analyst)[0]['value'], 'globex is never served acme\'s cached reading');
+        $this->assertStringStartsWith('Not measured yet', $this->card($analyst)[0]['value'], 'globex is never served acme\'s cached reading');
         $this->refresh(AnalyticsScope::tenant('globex'));
         $this->assertSame(70, $this->card($analyst)[0]['value']);
 
@@ -292,7 +293,7 @@ class TrafficAreaTest extends SectionTestCase
         Exceptions::assertReported(fn (TrafficScopeMismatch $e) => $e->queuedFor->tenantId === 'acme' && $e->runningIn->isInstall());
 
         $this->insideTenant('acme');
-        $this->assertSame('Not measured yet', $this->card($analyst)[0]['value'], 'acme keeps its honest state');
+        $this->assertStringStartsWith('Not measured yet', $this->card($analyst)[0]['value'], 'acme keeps its honest state');
     }
 
     #[Test]
@@ -334,5 +335,98 @@ class TrafficAreaTest extends SectionTestCase
         $this->refresh(AnalyticsScope::install());
 
         $this->assertSame(['install'], FakeTrafficSource::$asked);
+    }
+
+    /** A host with a real queue (its jobs run in a worker, not after the response). */
+    private function realQueue(): void
+    {
+        config(['queue.default' => 'database', 'queue.connections.database.driver' => 'database']);
+    }
+
+    /** @return int how many TrafficScopeMismatch / TrafficNeedsQueueWorker reports the fake handler holds */
+    private function reportsOf(string $class): int
+    {
+        return count(array_filter(Exceptions::reported(), fn ($e): bool => $e instanceof $class));
+    }
+
+    #[Test]
+    public function a_refused_tenant_refresh_keeps_its_flag_so_reads_do_not_requeue_or_rereport_within_the_ttl(): void
+    {
+        Bus::fake();
+        Exceptions::fake();
+        $this->realQueue();
+        $this->connect();
+        FakeTrafficSource::$readings['tenant:acme'] = FakeTrafficSource::snapshot(10);
+        $analyst = $this->analyst();
+
+        $this->insideTenant('acme');
+        foreach (range(1, 3) as $_) {
+            $this->card($analyst);
+        }
+        Bus::assertDispatchedTimes(RefreshTrafficReading::class, 1);
+
+        // The worker carries no tenant (a misconfigured host): the job is refused and reported, once.
+        $this->insideTenant(null);
+        $this->refresh(AnalyticsScope::tenant('acme'));
+
+        $this->insideTenant('acme');
+        foreach (range(1, 3) as $_) {
+            $this->card($analyst);
+        }
+
+        Bus::assertDispatchedTimes(RefreshTrafficReading::class, 1); // no re-queue storm within the ttl
+        $this->assertSame(1, $this->reportsOf(TrafficScopeMismatch::class), 'one refusal, one report, per ttl window');
+        $this->assertSame([], FakeTrafficSource::$asked);
+    }
+
+    #[Test]
+    public function a_tenant_on_a_sync_queue_is_not_dispatched_says_why_and_is_reported_once(): void
+    {
+        Bus::fake();
+        Exceptions::fake();
+        $this->connect();
+        FakeTrafficSource::$readings['tenant:acme'] = FakeTrafficSource::snapshot(10);
+        $analyst = $this->analyst();
+        $this->assertSame('sync', config('queue.connections.'.config('queue.default').'.driver'));
+
+        $this->insideTenant('acme');
+        foreach (range(1, 3) as $_) {
+            $card = $this->card($analyst);
+        }
+        $trend = $this->card($analyst, 'analytics-traffic-trend');
+
+        $reason = 'Not measured yet ('.TrafficNeedsQueueWorker::REASON.')';
+        $this->assertSame($reason, $card[0]['value']);
+        $this->assertSame($reason, $trend[0]['value'], 'the panels say the same');
+        Bus::assertNotDispatched(RefreshTrafficReading::class);
+        Bus::assertNotDispatchedAfterResponse(RefreshTrafficReading::class);
+        $this->assertSame(1, $this->reportsOf(TrafficNeedsQueueWorker::class), 'reported once per ttl window, not per read');
+        $this->assertSame([], FakeTrafficSource::$asked);
+    }
+
+    #[Test]
+    public function on_a_real_queue_a_tenant_refresh_is_dispatched_normally_and_measures_in_the_right_tenant(): void
+    {
+        Bus::fake();
+        $this->realQueue();
+        $this->connect();
+        FakeTrafficSource::$readings['tenant:acme'] = FakeTrafficSource::snapshot(10);
+        FakeTrafficSource::$readings['tenant:globex'] = FakeTrafficSource::snapshot(70);
+        $analyst = $this->analyst();
+
+        $this->insideTenant('acme');
+        $this->assertSame('Not measured yet', $this->card($analyst)[0]['value']);
+        Bus::assertNotDispatchedAfterResponse(RefreshTrafficReading::class);
+        $jobs = Bus::dispatched(RefreshTrafficReading::class);
+        $this->assertCount(1, $jobs);
+        $this->assertSame('acme', $jobs->first()->tenantId);
+
+        // The worker runs it inside acme (the host's queue tenancy carries the tenant).
+        $jobs->first()->handle(app(TrafficReadings::class));
+        $this->assertSame(10, $this->card($analyst)[0]['value']);
+
+        $this->insideTenant('globex');
+        $this->assertSame('Not measured yet', $this->card($analyst)[0]['value'], 'globex is never served acme\'s reading');
+        $this->assertSame(['tenant:acme'], FakeTrafficSource::$asked);
     }
 }

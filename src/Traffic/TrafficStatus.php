@@ -8,7 +8,8 @@ use Carbon\CarbonImmutable;
  * What Traffic can honestly say for a scope right now, read from the cache alone (never from the source):
  *
  * - **Not connected:** no registered source covers the scope.
- * - **Not measured yet:** a source covers it, and no reading has landed. A refresh is queued.
+ * - **Not measured yet:** a source covers it, and no reading has landed. A refresh is queued, or `reason` says why it
+ *   cannot be on this host (a tenant on a sync queue: "needs a queue worker to measure a tenant").
  * - **Measured:** the last reading, with when it was measured. `stale` when it is older than the ttl (a refresh is queued),
  *   and `failedAt` when the last refresh threw after it (the reading shown is still the last one that succeeded).
  * - **Failed:** a refresh threw, and there is no earlier reading to show. `failedAt` is when.
@@ -29,6 +30,7 @@ final class TrafficStatus
         public readonly ?CarbonImmutable $measuredAt = null,
         public readonly bool $stale = false,
         public readonly ?CarbonImmutable $failedAt = null,
+        public readonly ?string $reason = null,
     ) {}
 
     public static function notConnected(): self
@@ -36,9 +38,10 @@ final class TrafficStatus
         return new self(self::NOT_CONNECTED);
     }
 
-    public static function notMeasured(): self
+    /** Not measured yet; `$reason` says why it cannot be measured on this host, when it cannot (a tenant on a sync queue). */
+    public static function notMeasured(?string $reason = null): self
     {
-        return new self(self::NOT_MEASURED);
+        return new self(self::NOT_MEASURED, reason: $reason);
     }
 
     public static function measured(TrafficSnapshot $snapshot, CarbonImmutable $measuredAt, bool $stale, ?CarbonImmutable $failedAt = null): self
@@ -64,7 +67,7 @@ final class TrafficStatus
     {
         return match ($this->state) {
             self::NOT_CONNECTED => 'Not connected',
-            self::NOT_MEASURED => 'Not measured yet',
+            self::NOT_MEASURED => 'Not measured yet'.($this->reason !== null ? ' ('.$this->reason.')' : ''),
             self::FAILED => "Couldn't be measured (".self::at($this->failedAt).')',
             default => null,
         };
