@@ -405,6 +405,43 @@ class TrafficAreaTest extends SectionTestCase
     }
 
     #[Test]
+    public function a_stale_tenant_reading_on_a_sync_queue_keeps_its_numbers_and_says_it_cant_refresh_not_refreshing(): void
+    {
+        // review-r1's input (qitem-20261111015651-1bc2ea78): a real tenant reading measured at T on a database queue, then
+        // the web queue becomes sync and the reading goes past the ttl.
+        Bus::fake();
+        Exceptions::fake();
+        $this->realQueue();
+        $this->connect();
+        FakeTrafficSource::$readings['tenant:acme'] = FakeTrafficSource::snapshot(10);
+        $analyst = $this->analyst();
+        $this->insideTenant('acme');
+        $this->travelTo('2026-11-10 12:00:00');
+        $this->refresh(AnalyticsScope::tenant('acme'));
+
+        config(['queue.default' => 'sync']);
+        $this->travelTo('2026-11-10 14:00:00');
+        foreach (range(1, 3) as $_) {
+            $card = $this->card($analyst);
+        }
+        $pages = $this->card($analyst, 'analytics-traffic-pages');
+
+        $this->assertSame(10, $card[0]['value'], 'the last good numbers stay');
+        $this->assertSame("2026-11-10 12:00 UTC · Last 28 days · Can't refresh (".TrafficNeedsQueueWorker::REASON.')', $card[3]['value']);
+        $this->assertNotSame([], $pages, 'the panels keep the last good rows');
+        $this->assertStringNotContainsString('refreshing', json_encode([$card, $pages]), 'nothing claims a refresh is under way');
+        Bus::assertNotDispatched(RefreshTrafficReading::class);
+        Bus::assertNotDispatchedAfterResponse(RefreshTrafficReading::class);
+        $this->assertSame(1, $this->reportsOf(TrafficNeedsQueueWorker::class), 'reported once per ttl window, not per read');
+        $this->assertSame(['tenant:acme'], FakeTrafficSource::$asked);
+
+        // Back on a real queue, a stale reading says refreshing and dispatches, unchanged.
+        $this->realQueue();
+        $this->assertSame('2026-11-10 12:00 UTC · Last 28 days · refreshing', $this->card($analyst)[3]['value']);
+        Bus::assertDispatchedTimes(RefreshTrafficReading::class, 1);
+    }
+
+    #[Test]
     public function on_a_real_queue_a_tenant_refresh_is_dispatched_normally_and_measures_in_the_right_tenant(): void
     {
         Bus::fake();

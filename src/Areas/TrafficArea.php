@@ -66,10 +66,8 @@ final class TrafficArea implements AnalyticsArea
     {
         $when = TrafficStatus::at($status->measuredAt).' · '.$reading->period->label();
 
-        return match (true) {
-            $status->failedAt !== null => $when.' · last refresh failed',
-            $status->stale => $when.' · refreshing',
-            default => $when,
-        };
+        $note = $status->refreshNote();
+
+        return $note === null ? $when : $when.' · '.$note;
     }
 }

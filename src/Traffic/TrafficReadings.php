@@ -19,7 +19,7 @@ use Throwable;
  *
  * - {@see status()} reads the cache only. No source covers the scope: "Not connected". No reading yet: "Not measured yet", and
  *   a refresh is queued. A reading older than `beam.analytics.traffic.ttl` seconds (default 3600) is still shown, with its
- *   time, and a refresh is queued. At most one refresh is outstanding per scope and period.
+ *   time, and a refresh is queued, or, where none can be (a tenant on a sync queue), it says why it can't. At most one refresh is outstanding per scope and period.
  * - {@see refresh()} runs in the queued {@see RefreshTrafficReading} job, and asks the source. It runs only inside the scope's
  *   own tenant: the job carries its scope, and before it asks a source it checks that beam's {@see TenancyContext} reports
  *   that same tenant (or no tenant, for Install scope). A mismatch, such as a host whose queue does not carry the tenant into
@@ -64,11 +64,11 @@ final class TrafficReadings
 
         $stale = $measuredAt->addSeconds($this->ttl())->isPast();
 
-        if ($stale) {
-            $this->refreshLater($scope, $period);
-        }
+        // A stale reading keeps its last good numbers and time. When it cannot be refreshed on this host (a tenant on a sync
+        // queue), the reason travels with it, so it never claims to be refreshing (08 amend 2).
+        $reason = $stale ? $this->refreshLater($scope, $period) : null;
 
-        return TrafficStatus::measured($snapshot, $measuredAt, $stale, $failedAt);
+        return TrafficStatus::measured($snapshot, $measuredAt, $stale, $failedAt, $reason);
     }
 
     /**
