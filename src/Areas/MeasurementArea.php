@@ -70,7 +70,7 @@ final class MeasurementArea implements AnalyticsArea
     private function consent(): string
     {
         if (! (bool) $this->config->get('beam.analytics.consent.enabled', true)) {
-            return 'Off';
+            return __('beam-analytics::messages.measurement.off');
         }
 
         return $this->listed($this->strings('beam.analytics.consent.denied_regions'));
@@ -81,13 +81,14 @@ final class MeasurementArea implements AnalyticsArea
         [$placed, $checked] = $this->audit->placement();
 
         if ($checked === []) {
-            return 'Unverified: no root template found';
+            return __('beam-analytics::messages.measurement.unverified');
         }
 
-        $count = count($checked);
-        $templates = $count === 1 ? '1 root template' : "{$count} root templates";
+        $count = $placed === [] ? count($checked) : count($placed);
 
-        return $placed === [] ? "Not placed in {$templates}" : 'Placed in '.(count($placed) === 1 ? '1 root template' : count($placed).' root templates');
+        return __($placed === []
+            ? ($count === 1 ? 'beam-analytics::messages.measurement.not_placed_one' : 'beam-analytics::messages.measurement.not_placed_many')
+            : ($count === 1 ? 'beam-analytics::messages.measurement.placed_one' : 'beam-analytics::messages.measurement.placed_many'), ['count' => $count]);
     }
 
     /** @return list<string> */
@@ -99,6 +100,6 @@ final class MeasurementArea implements AnalyticsArea
     /** @param  list<string>  $items */
     private function listed(array $items): string
     {
-        return $items === [] ? 'None' : implode(', ', $items);
+        return $items === [] ? __('beam-analytics::messages.measurement.none') : implode(', ', $items);
     }
 }

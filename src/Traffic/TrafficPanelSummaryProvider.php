@@ -42,7 +42,7 @@ final class TrafficPanelSummaryProvider implements ResourceSummaryProvider
             : [new SummaryFigureData(
                 key: 'status',
                 label: $resource->resolvedLabel(),
-                value: $status->headline() ?? 'None measured',
+                value: $status->headline() ?? __('beam-analytics::messages.traffic.none_measured'),
                 tone: $status->state === TrafficStatus::FAILED ? SummaryFigureData::TONE_WARN : null,
             )];
 

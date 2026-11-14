@@ -14,6 +14,8 @@ use Rushing\Popcorn\Registries\Registry;
 use Rushing\Popcorn\Registries\RegistryKey;
 use Splicewire\Beam\Analytics\AnalyticsSection;
 use Splicewire\Beam\Analytics\Data\AnalyticsFigureData;
+use Splicewire\Beam\Localization\DeclaredText;
+use Splicewire\Beam\Localization\FrameText;
 use UnexpectedValueException;
 
 /**
@@ -116,6 +118,18 @@ class AnalyticsAreaRegistry implements Gated, Registry
             if (! $figure instanceof AnalyticsFigureData) {
                 throw new UnexpectedValueException(sprintf('The Analytics Area [%s] measured a %s; an area measures %s figures.', $area->class, get_debug_type($figure), AnalyticsFigureData::class));
             }
+        }
+
+        // Only package-owned fixed figures have declared labels; event names and host figures stay authored bytes.
+        if (in_array($area->class, [MeasurementArea::class, TrafficArea::class], true)) {
+            $prefix = $this->container->make(FrameText::class)->prefixFor(null, $area->class);
+            $text = $this->container->make(DeclaredText::class);
+            $figures = array_map(function (AnalyticsFigureData $figure) use ($prefix, $text, $area): AnalyticsFigureData {
+                $copy = clone $figure;
+                $copy->label = (string) $text->resolve(DeclaredText::derive($prefix, 'figures', [$area->key(), $figure->id], 'label'), $figure->label);
+
+                return $copy;
+            }, $figures);
         }
 
         return array_values($figures);

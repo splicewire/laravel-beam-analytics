@@ -66,10 +66,10 @@ final class TrafficArea implements MeasuresOverPeriod
     /** When the totals were measured and over what window, and whether they are due a refresh or the last refresh failed. */
     private static function measured(TrafficStatus $status, AnalyticsReading $reading): string
     {
-        $when = TrafficStatus::at($status->measuredAt).' · '.$reading->period->label();
-
         $note = $status->refreshNote();
 
-        return $note === null ? $when : $when.' · '.$note;
+        return __($note === null ? 'beam-analytics::messages.traffic.measured' : 'beam-analytics::messages.traffic.measured_note', [
+            'when' => TrafficStatus::at($status->measuredAt), 'period' => $reading->period->label(), 'note' => $note ?? '',
+        ]);
     }
 }

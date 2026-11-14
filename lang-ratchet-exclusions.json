@@ -1,0 +1,14 @@
+{
+  "exclusions": [
+    {
+      "file": "src/Areas/MeasurementArea.php",
+      "method": "measure",
+      "reason": "declaration resolved at read time: AnalyticsAreaRegistry src/Areas/AnalyticsAreaRegistry.php:129; coord ruling 26-census B"
+    },
+    {
+      "file": "src/Areas/TrafficArea.php",
+      "method": "measure",
+      "reason": "declaration resolved at read time: AnalyticsAreaRegistry src/Areas/AnalyticsAreaRegistry.php:129; coord ruling 26-census B"
+    }
+  ]
+}

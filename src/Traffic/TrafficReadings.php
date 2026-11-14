@@ -205,7 +205,7 @@ final class TrafficReadings
                 report(new TrafficNeedsQueueWorker($scope));
             }
 
-            return TrafficNeedsQueueWorker::REASON;
+            return TrafficNeedsQueueWorker::reason();
         }
 
         if (! $this->cache->add($this->queuedKey($scope, $period), true, max(1, $this->ttl()))) {

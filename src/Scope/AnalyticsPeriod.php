@@ -81,6 +81,6 @@ final class AnalyticsPeriod
 
     public function label(): string
     {
-        return "Last {$this->days} days";
+        return __('beam-analytics::messages.period.last_days', ['days' => $this->days]);
     }
 }

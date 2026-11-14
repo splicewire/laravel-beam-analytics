@@ -54,8 +54,10 @@ final class EventsArea implements AnalyticsArea
      */
     public static function declared(string $source, array $parameters): string
     {
-        $by = $source === 'host' ? 'Declared by the host' : 'Declared by a package';
+        $key = $source === 'host'
+            ? ($parameters === [] ? 'beam-analytics::messages.events.host_empty' : 'beam-analytics::messages.events.host_parameters')
+            : ($parameters === [] ? 'beam-analytics::messages.events.package_empty' : 'beam-analytics::messages.events.package_parameters');
 
-        return $by.' · '.($parameters === [] ? 'no parameters' : implode(', ', $parameters));
+        return __($key, ['parameters' => implode(', ', $parameters)]);
     }
 }

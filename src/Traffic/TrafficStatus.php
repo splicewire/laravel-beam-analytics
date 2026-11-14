@@ -68,9 +68,9 @@ final class TrafficStatus
     public function headline(): ?string
     {
         return match ($this->state) {
-            self::NOT_CONNECTED => 'Not connected',
-            self::NOT_MEASURED => 'Not measured yet'.($this->reason !== null ? ' ('.$this->reason.')' : ''),
-            self::FAILED => "Couldn't be measured (".self::at($this->failedAt).')',
+            self::NOT_CONNECTED => __('beam-analytics::messages.traffic.not_connected'),
+            self::NOT_MEASURED => __($this->reason === null ? 'beam-analytics::messages.traffic.not_measured' : 'beam-analytics::messages.traffic.not_measured_reason', ['reason' => $this->reason ?? '']),
+            self::FAILED => __('beam-analytics::messages.traffic.failed', ['when' => self::at($this->failedAt)]),
             default => null,
         };
     }
@@ -82,9 +82,9 @@ final class TrafficStatus
     public function refreshNote(): ?string
     {
         return match (true) {
-            $this->failedAt !== null => 'last refresh failed',
-            $this->stale && $this->reason !== null => "Can't refresh (".$this->reason.')',
-            $this->stale => 'refreshing',
+            $this->failedAt !== null => __('beam-analytics::messages.traffic.refresh_failed'),
+            $this->stale && $this->reason !== null => __('beam-analytics::messages.traffic.cannot_refresh', ['reason' => $this->reason]),
+            $this->stale => __('beam-analytics::messages.traffic.refreshing'),
             default => null,
         };
     }
@@ -92,6 +92,6 @@ final class TrafficStatus
     /** A time as drawn: in UTC, to the minute, labelled. */
     public static function at(?\DateTimeInterface $time): string
     {
-        return $time === null ? 'unknown' : CarbonImmutable::instance($time)->utc()->format('Y-m-d H:i').' UTC';
+        return $time === null ? __('beam-analytics::messages.traffic.unknown') : CarbonImmutable::instance($time)->utc()->format('Y-m-d H:i').' UTC';
     }
 }

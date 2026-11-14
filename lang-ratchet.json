@@ -1,0 +1,71 @@
+{
+    "about": "localization 12 ratchet: user-facing string literals in response-reaching calls. May only fall. Regenerate with `php artisan beam:lang:ratchet --write` (or the package's equivalent); never edit by hand.",
+    "population": "PHP source under src/: constant, interpolated and forwarded (->getMessage()) text passed to abort* (message only), HttpException, withMessages/withErrors, response()->json and new JsonResponse message/error, MailMessage subject/greeting/line/salutation/action, Notification toArray/toDatabase/toBroadcast values, flash messages, and copy-named arguments of runtime Data objects; exclusions reported with their reasons. Not read: Blade views, helper-built text, ->with(), raw Response bodies, DTO wrappers, match/summary arms, variable-forwarded messages (each sweep classifies these by hand).",
+    "total": 0,
+    "files": [],
+    "excluded": [
+        {
+            "file": "src/Areas/MeasurementArea.php",
+            "line": 38,
+            "method": "measure",
+            "kind": "data",
+            "reason": "declaration resolved at read time: AnalyticsAreaRegistry src/Areas/AnalyticsAreaRegistry.php:129; coord ruling 26-census B"
+        },
+        {
+            "file": "src/Areas/MeasurementArea.php",
+            "line": 39,
+            "method": "measure",
+            "kind": "data",
+            "reason": "declaration resolved at read time: AnalyticsAreaRegistry src/Areas/AnalyticsAreaRegistry.php:129; coord ruling 26-census B"
+        },
+        {
+            "file": "src/Areas/MeasurementArea.php",
+            "line": 40,
+            "method": "measure",
+            "kind": "data",
+            "reason": "declaration resolved at read time: AnalyticsAreaRegistry src/Areas/AnalyticsAreaRegistry.php:129; coord ruling 26-census B"
+        },
+        {
+            "file": "src/Areas/MeasurementArea.php",
+            "line": 41,
+            "method": "measure",
+            "kind": "data",
+            "reason": "declaration resolved at read time: AnalyticsAreaRegistry src/Areas/AnalyticsAreaRegistry.php:129; coord ruling 26-census B"
+        },
+        {
+            "file": "src/Areas/TrafficArea.php",
+            "line": 49,
+            "method": "measure",
+            "kind": "data",
+            "reason": "declaration resolved at read time: AnalyticsAreaRegistry src/Areas/AnalyticsAreaRegistry.php:129; coord ruling 26-census B"
+        },
+        {
+            "file": "src/Areas/TrafficArea.php",
+            "line": 59,
+            "method": "measure",
+            "kind": "data",
+            "reason": "declaration resolved at read time: AnalyticsAreaRegistry src/Areas/AnalyticsAreaRegistry.php:129; coord ruling 26-census B"
+        },
+        {
+            "file": "src/Areas/TrafficArea.php",
+            "line": 60,
+            "method": "measure",
+            "kind": "data",
+            "reason": "declaration resolved at read time: AnalyticsAreaRegistry src/Areas/AnalyticsAreaRegistry.php:129; coord ruling 26-census B"
+        },
+        {
+            "file": "src/Areas/TrafficArea.php",
+            "line": 61,
+            "method": "measure",
+            "kind": "data",
+            "reason": "declaration resolved at read time: AnalyticsAreaRegistry src/Areas/AnalyticsAreaRegistry.php:129; coord ruling 26-census B"
+        },
+        {
+            "file": "src/Areas/TrafficArea.php",
+            "line": 62,
+            "method": "measure",
+            "kind": "data",
+            "reason": "declaration resolved at read time: AnalyticsAreaRegistry src/Areas/AnalyticsAreaRegistry.php:129; coord ruling 26-census B"
+        }
+    ]
+}

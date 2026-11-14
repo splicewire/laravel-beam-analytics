@@ -15,6 +15,12 @@ final class TrafficNeedsQueueWorker extends RuntimeException
 {
     public const REASON = 'needs a queue worker to measure a tenant';
 
+    /** Read-time copy only; REASON remains the public raw compatibility declaration. */
+    public static function reason(): string
+    {
+        return __('beam-analytics::messages.traffic.needs_worker');
+    }
+
     public function __construct(
         public readonly AnalyticsScope $scope,
     ) {
