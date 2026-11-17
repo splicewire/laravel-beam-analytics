@@ -9,7 +9,8 @@ use Splicewire\Beam\Analytics\Data\TrafficRankData;
  * The three panels drawn beside the Traffic area, each its own read-only resource in the Analytics section: the trend, the top
  * pages and the referrers. They are resources of their own, not figures on the Traffic card, because frame's `trend-card`
  * draws a summary's WHOLE figure list as one series, and a card's widget is the class-level `#[Summary]` on its resource's own
- * data class. Beam has no way to keep a section resource out of the section's nav, so each is also a page there.
+ * data class. Each is also a page in the section's nav, and the section folds the three into one tab
+ * ({@see \Splicewire\Beam\Analytics\AnalyticsSection::TRAFFIC_PANELS_GROUP}, matched by {@see NAV_MATCH}).
  *
  * Every panel reads the same cached reading as the Traffic area ({@see TrafficReadings}), so a panel and the card cannot
  * disagree. Until there is a measured reading a panel's page lists nothing and its card says the state in the Traffic
@@ -29,6 +30,13 @@ final class TrafficPanels
         self::PAGES => ['label' => 'Top pages', 'icon' => 'FileText', 'order' => 17, 'data' => TrafficRankData::class],
         self::REFERRERS => ['label' => 'Referrers', 'icon' => 'Link2', 'order' => 18, 'data' => TrafficRankData::class],
     ];
+
+    /**
+     * The section's nav group match for the three panels (root ruling f46b2b53): a raw prefix that every panel's page
+     * starts with, `/analytics-traffic-…` under the realm's route base, and the Traffic area's own `/analytics-traffic`
+     * does not. So the area keeps its own tab.
+     */
+    public const NAV_MATCH = 'analytics-traffic-*';
 
     /** The resource key a panel is drawn as. */
     public static function resourceKey(string $panel): string

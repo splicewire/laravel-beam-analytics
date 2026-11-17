@@ -2,6 +2,7 @@
 
 namespace Splicewire\Beam\Analytics;
 
+use Splicewire\Beam\Analytics\Traffic\TrafficPanels;
 use Splicewire\Beam\Nav\NavAudience;
 use Splicewire\Beam\Nav\NavSection;
 
@@ -34,6 +35,13 @@ final class AnalyticsSection
 
     public const ORDER = 70;
 
+    /**
+     * The one nav group the section declares (analytics-area 22, owner ruling 2026-11-12): the three Traffic panels fold
+     * into one tab beside Traffic, so the strip holds seven on every host (Measurement, Traffic, this, Events, Site,
+     * Audience, Revenue and usage). The panels stay pages of their own: each keeps its rail entry and its card.
+     */
+    public const TRAFFIC_PANELS_GROUP = 'Traffic detail';
+
     /** The registrant this package writes under, in every registry it fills. */
     public const REGISTRANT = 'splicewire/laravel-beam-analytics';
 
@@ -54,6 +62,7 @@ final class AnalyticsSection
             permission: null,
             audience: NavAudience::Product,
             overview: true,
+            groups: [['label' => self::TRAFFIC_PANELS_GROUP, 'match' => TrafficPanels::NAV_MATCH]],
         );
     }
 }
