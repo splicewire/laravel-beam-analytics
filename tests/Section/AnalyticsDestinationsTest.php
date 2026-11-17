@@ -139,4 +139,80 @@ class AnalyticsDestinationsTest extends SectionTestCase
         $this->actingAs($outsider)->getJson('/frame/resources/analytics-measurement')->assertForbidden();
         $this->actingAs($outsider)->getJson('/frame/resources/analytics-measurement/summary')->assertForbidden();
     }
+
+    /**
+     * Ticket 24: on an SPA host the real page is a client leaf, not a Laravel route, so the host names the leaf's own
+     * path directly. The link draws for a viewer who passes the ability, with no route registered, and not for one who
+     * does not — the ability still gates it, and it is still a relative link.
+     */
+    #[Test]
+    public function a_client_leaf_destination_draws_its_relative_href_only_for_a_viewer_with_the_ability(): void
+    {
+        [$analyst, $settler] = $this->readers();
+        // No siteSettingsRoute(): the leaf is a client page, not a named route.
+        $this->bindDestinations([AnalyticsDestinations::SITE_SETTINGS => AnalyticsDestination::leaf('/site/settings', self::ABILITY)]);
+
+        $this->assertSame(
+            ['providers' => '/site/settings', 'environments' => null, 'consent' => null, 'placement' => null],
+            $this->hrefs($settler),
+        );
+        $this->assertNull($this->hrefs($analyst)['providers'], 'control: the same leaf binding, a viewer without the ability');
+    }
+
+    /** A client leaf is drawn only when it is a site-relative path; anything that could leave the site fails closed. */
+    #[Test]
+    public function a_client_leaf_destination_that_is_not_site_relative_draws_no_link(): void
+    {
+        [, $settler] = $this->readers();
+
+        foreach ([
+            'https://evil.example/site/settings' => 'an absolute URL',
+            '//evil.example/site/settings' => 'a protocol-relative host',
+            '/\\evil.example/site' => 'a backslash authority',
+            'site/settings' => 'no leading slash',
+            '' => 'empty',
+        ] as $href => $why) {
+            $this->bindDestinations([AnalyticsDestinations::SITE_SETTINGS => AnalyticsDestination::leaf($href, self::ABILITY)]);
+            $this->assertNull($this->hrefs($settler)['providers'], 'a leaf that is '.$why.' opens off-site, so it draws no link');
+        }
+    }
+
+    /**
+     * A browser's URL parser strips an internal TAB/LF/CR, so a href like `/<TAB>/evil.example` — whose raw bytes show no
+     * `//` and whose parse_url reports no host — would navigate off-site once stripped. Any ASCII control (C0 or DEL)
+     * fails closed (review-r1 / build-qa HIGH, ticket 24). Proven through the PUBLIC drawn figure for a viewer who passes
+     * the ability — `hrefs()` is the Measurement resource endpoint — so no off-site href is ever emitted; and a
+     * control-free relative path still draws, so the gate does not over-reject.
+     */
+    #[Test]
+    public function a_client_leaf_destination_with_an_ascii_control_character_draws_no_link(): void
+    {
+        [, $settler] = $this->readers();
+
+        foreach ([
+            "/\t/evil.example/site" => 'a TAB between the slashes',
+            "/\n/evil.example/site" => 'an LF between the slashes',
+            "/\r/evil.example/site" => 'a CR between the slashes',
+            "/\x00/evil.example/site" => 'a NUL between the slashes',
+            "/\r\\evil.example/site" => 'a CR before a backslash authority',
+            "\t//evil.example/site" => 'a leading TAB around the slashes',
+            "/site/\x07settings" => 'a control inside an otherwise-relative path',
+        ] as $href => $why) {
+            $this->bindDestinations([AnalyticsDestinations::SITE_SETTINGS => AnalyticsDestination::leaf($href, self::ABILITY)]);
+            $this->assertNull($this->hrefs($settler)['providers'], 'a leaf with '.$why.' is stripped to an off-site href by a browser, so the figure draws no link');
+        }
+
+        $this->bindDestinations([AnalyticsDestinations::SITE_SETTINGS => AnalyticsDestination::leaf('/site/settings/acme', self::ABILITY)]);
+        $this->assertSame('/site/settings/acme', $this->hrefs($settler)['providers'], 'a control-free relative path is unaffected by the control gate');
+    }
+
+    /** A client-leaf destination that names no ability opens for no one, as a named-route one does not. */
+    #[Test]
+    public function a_client_leaf_destination_with_no_ability_opens_for_no_one(): void
+    {
+        [, $settler] = $this->readers();
+        $this->bindDestinations([AnalyticsDestinations::SITE_SETTINGS => AnalyticsDestination::leaf('/site/settings', '')]);
+
+        $this->assertNull($this->hrefs($settler)['providers'], 'a leaf destination that names no ability opens for no one');
+    }
 }
