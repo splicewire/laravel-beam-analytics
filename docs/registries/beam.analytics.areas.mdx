@@ -51,7 +51,16 @@ a package or the host declared it, in the order `x-events` serves them. Every ro
 records an event firing. Each row links to the host's `site-editor` destination.
 
 A figure links only through a destination the host binds on the `AnalyticsDestinations` port, only where that route
-exists and the viewer passes its ability. With no binding there are no links.
+exists and the viewer passes its ability. With no binding there are no links. The link is the figure's `href`, and an
+area's page draws it on the figure's label: the Figure column is declared as frame's `link` list-column kind over `href`
+(`#[Column('link', options: ['hrefKey' => 'href'])]`), so a host's frame list draws it with no analytics code of its own.
+A site-relative `href` opens through the router link the host gives frame's kit as `renderLink`, and a null `href` draws
+plain text. Frame gives the `link` kind that router link only when the host builds its widget registry with
+`createFrameRegistry({ renderLink })` or `createFrameKit({ renderLink })`. A registry the host assembles by hand
+(`createWidgetRegistry()` plus `registerCardWidgets()`) hands the cards their router link but not the `link` kind, so a
+figure's link draws as a plain anchor: a full page load that ignores the router's basename (on the flagship, outside
+`/ui`). The host's `@schemastud/frame` must have the `link` kind (frame-foundation 77): on an older frame the label
+draws as an unbound widget.
 
 ## Contributing an area
 

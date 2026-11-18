@@ -24,7 +24,9 @@ class AnalyticsFigureData extends BeamData
     public function __construct(
         #[Description('The figure\'s stable key within its area.')]
         public string $id,
-        #[Column(label: 'Figure', sort: 0)]
+        // Frame's `link` list-column kind (frame-foundation 77, CONFORM 77-1): the label is drawn as a link to the row's
+        // own `href`, through the host's router link for a site-relative one, and as plain text when `href` is null.
+        #[Column('link', label: 'Figure', sort: 0, options: ['hrefKey' => 'href'])]
         #[Description('What the figure measures.')]
         public string $label,
         #[Column(label: 'Value', sort: 1)]
